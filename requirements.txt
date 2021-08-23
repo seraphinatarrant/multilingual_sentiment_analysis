@@ -2,5 +2,5 @@ datasets
 openpyxl
 pandas
 sklearn
-spacy=3.0
+spacy==3.0
 transformers
