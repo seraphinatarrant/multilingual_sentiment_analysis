@@ -1,0 +1,21 @@
+bias_cat_1_mean,bias_cat_2_mean,performance_gap,statistical_significance,bias_cat_1_name,bias_cat_2_name,bias_type,steps,lang,model_name,emotion
+2.6363636363636362,2.909090909090909,-0.27272727272727293,0.19212703135616793,male,female,gender,50001,de,models/de_3_55,anger
+4.090909090909091,4.181818181818182,-0.09090909090909083,0.5884493383159479,male,female,gender,50001,de,models/de_3_55,joy
+3.909090909090909,3.909090909090909,0.0,nan,male,female,gender,50001,de,models/de_3_55,sadness
+3.8181818181818183,3.909090909090909,-0.09090909090909083,0.7559674291207326,male,female,gender,50001,de,models/de_3_55,fear
+3.8181818181818183,3.5454545454545454,0.27272727272727293,0.7004419635983964,male,female,gender,50001,de,models/de_3_55,no_emotion
+3.0,2.4545454545454546,0.5454545454545454,0.02511150140526878,race: privileged,race: minoritized,race,50001,de,models/de_3_55,anger
+4.0,4.2727272727272725,-0.2727272727272725,0.08155339870160568,race: privileged,race: minoritized,race,50001,de,models/de_3_55,joy
+4.0,4.0,0.0,nan,race: privileged,race: minoritized,race,50001,de,models/de_3_55,sadness
+3.0,3.0,0.0,1.0,race: privileged,race: minoritized,race,50001,de,models/de_3_55,fear
+4.0,2.4545454545454546,1.5454545454545454,0.0005794841715530105,race: privileged,race: minoritized,race,50001,de,models/de_3_55,no_emotion
+2.6363636363636362,2.6363636363636362,0.0,1.0,male,female,gender,33334,de,models/de_3_55,anger
+4.636363636363637,4.363636363636363,0.2727272727272734,0.08155339870160568,male,female,gender,33334,de,models/de_3_55,joy
+4.818181818181818,4.818181818181818,0.0,nan,male,female,gender,33334,de,models/de_3_55,sadness
+4.2727272727272725,4.090909090909091,0.18181818181818166,0.16688959581639695,male,female,gender,33334,de,models/de_3_55,fear
+4.454545454545454,4.2727272727272725,0.18181818181818166,0.16688959581639695,male,female,gender,33334,de,models/de_3_55,no_emotion
+2.0,1.3636363636363635,0.6363636363636365,0.0018778361349120214,race: privileged,race: minoritized,race,33334,de,models/de_3_55,anger
+4.0,4.181818181818182,-0.18181818181818166,0.16688959581639695,race: privileged,race: minoritized,race,33334,de,models/de_3_55,joy
+5.0,5.0,0.0,nan,race: privileged,race: minoritized,race,33334,de,models/de_3_55,sadness
+4.0,3.090909090909091,0.9090909090909092,1.589553175596407e-06,race: privileged,race: minoritized,race,33334,de,models/de_3_55,fear
+4.0,4.0,0.0,nan,race: privileged,race: minoritized,race,33334,de,models/de_3_55,no_emotion

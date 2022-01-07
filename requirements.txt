@@ -1,6 +1,12 @@
 datasets
+fugashi
+ipadic
 openpyxl
 pandas
+seaborn
 sklearn
-spacy=3.0
+spacy==3.0
+torch
 transformers
+unidic-lite
+wandb

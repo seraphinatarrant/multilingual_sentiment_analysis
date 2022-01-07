@@ -1,0 +1,129 @@
+Validation
+              precision    recall  f1-score   support
+
+           1       0.67      0.63      0.65      1000
+           2       0.44      0.45      0.44      1000
+           3       0.43      0.35      0.39      1000
+           4       0.53      0.41      0.46      1000
+           5       0.59      0.86      0.70      1000
+
+    accuracy                           0.54      5000
+   macro avg       0.53      0.54      0.53      5000
+weighted avg       0.53      0.54      0.53      5000
+
+[[627 211  89  24  49]
+ [190 453 187  83  87]
+ [ 92 285 347 174 102]
+ [ 17  68 153 408 354]
+ [ 12  19  23  85 861]]
+EEC
+Performance
+European
+              precision    recall  f1-score   support
+
+    positive       0.28      0.99      0.44        72
+    negative       0.95      0.17      0.29       216
+     neutral       0.00      0.00      0.00         8
+
+    accuracy                           0.36       296
+   macro avg       0.41      0.39      0.24       296
+weighted avg       0.76      0.36      0.32       296
+
+[[ 71   1   0]
+ [175  37   4]
+ [  7   1   0]]
+-----------------------------------------------------------------------------------------
+African-American
+              precision    recall  f1-score   support
+
+    positive       0.28      1.00      0.44        72
+    negative       0.94      0.15      0.26       216
+     neutral       0.00      0.00      0.00         8
+
+    accuracy                           0.35       296
+   macro avg       0.41      0.38      0.23       296
+weighted avg       0.76      0.35      0.29       296
+
+[[ 72   0   0]
+ [178  32   6]
+ [  6   2   0]]
+-----------------------------------------------------------------------------------------
+female
+              precision    recall  f1-score   support
+
+    positive       0.27      1.00      0.43       432
+    negative       0.97      0.14      0.25      1296
+     neutral       0.00      0.00      0.00        48
+
+    accuracy                           0.35      1776
+   macro avg       0.41      0.38      0.23      1776
+weighted avg       0.77      0.35      0.29      1776
+
+[[ 430    2    0]
+ [1103  185    8]
+ [  44    4    0]]
+-----------------------------------------------------------------------------------------
+male
+              precision    recall  f1-score   support
+
+    positive       0.27      0.99      0.42       432
+    negative       0.97      0.13      0.23      1296
+     neutral       0.00      0.00      0.00        48
+
+    accuracy                           0.34      1776
+   macro avg       0.41      0.37      0.22      1776
+weighted avg       0.77      0.34      0.27      1776
+
+[[ 429    3    0]
+ [1116  170   10]
+ [  45    3    0]]
+-----------------------------------------------------------------------------------------
+race: privileged
+              precision    recall  f1-score   support
+
+    positive       0.28      1.00      0.44       720
+    negative       0.94      0.16      0.27      2160
+     neutral       0.01      0.01      0.01        80
+
+    accuracy                           0.36      2960
+   macro avg       0.41      0.39      0.24      2960
+weighted avg       0.75      0.36      0.31      2960
+
+[[ 717    3    0]
+ [1752  342   66]
+ [  59   20    1]]
+-----------------------------------------------------------------------------------------
+race: minoritized
+              precision    recall  f1-score   support
+
+    positive       0.29      0.98      0.45       720
+    negative       0.94      0.16      0.27      2160
+     neutral       0.05      0.09      0.07        80
+
+    accuracy                           0.36      2960
+   macro avg       0.43      0.41      0.26      2960
+weighted avg       0.76      0.36      0.31      2960
+
+[[ 709    5    6]
+ [1694  347  119]
+ [  56   17    7]]
+-----------------------------------------------------------------------------------------
+Bias
+
+gender
+
+T-test:
+Statistic: 0.4858497940831009 p: 0.6271336356517947
+male
+Overall Mean: 4.596846846846847
+female
+Overall Mean: 4.586711711711712
+
+race
+
+T-test:
+Statistic: 3.9112928834840557 p: 9.386690152858231e-05
+race: privileged
+Overall Mean: 4.4875
+race: minoritized
+Overall Mean: 4.438851351351351

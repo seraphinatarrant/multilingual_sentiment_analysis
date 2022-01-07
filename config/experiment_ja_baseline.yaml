@@ -1,0 +1,8 @@
+model_lang: ja
+test_lang: ja
+model_dirs:
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/ja_0_1
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/ja_0_2
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/ja_0_3
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/ja_0_4
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/ja_0_5

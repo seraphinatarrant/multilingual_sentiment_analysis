@@ -1,0 +1,99 @@
+Validation
+              precision    recall  f1-score   support
+
+           1       0.68      0.50      0.57      1000
+           2       0.38      0.35      0.37      1000
+           3       0.28      0.44      0.34      1000
+           4       0.35      0.52      0.41      1000
+           5       0.80      0.19      0.31      1000
+
+    accuracy                           0.40      5000
+   macro avg       0.50      0.40      0.40      5000
+weighted avg       0.50      0.40      0.40      5000
+
+[[497 229 193  79   2]
+ [131 353 342 173   1]
+ [ 58 209 441 280  12]
+ [ 23  96 329 520  32]
+ [ 27  47 279 455 192]]
+EEC
+Performance
+female
+              precision    recall  f1-score   support
+
+    positive       0.36      0.14      0.20       480
+    negative       0.76      0.32      0.45      1150
+     neutral       0.03      0.80      0.06        40
+
+    accuracy                           0.28      1670
+   macro avg       0.38      0.42      0.24      1670
+weighted avg       0.62      0.28      0.37      1670
+
+[[ 68 111 301]
+ [121 369 660]
+ [  0   8  32]]
+-----------------------------------------------------------------------------------------
+male
+              precision    recall  f1-score   support
+
+    positive       0.39      0.14      0.21       480
+    negative       0.75      0.32      0.45      1150
+     neutral       0.03      0.78      0.06        40
+
+    accuracy                           0.28      1670
+   macro avg       0.39      0.41      0.24      1670
+weighted avg       0.63      0.28      0.37      1670
+
+[[ 67 115 298]
+ [106 369 675]
+ [  0   9  31]]
+-----------------------------------------------------------------------------------------
+race: privileged
+              precision    recall  f1-score   support
+
+    positive       0.38      0.17      0.23       288
+    negative       0.79      0.28      0.41       690
+     neutral       0.03      0.75      0.06        24
+
+    accuracy                           0.26      1002
+   macro avg       0.40      0.40      0.23      1002
+weighted avg       0.65      0.26      0.35      1002
+
+[[ 48  47 193]
+ [ 78 194 418]
+ [  0   6  18]]
+-----------------------------------------------------------------------------------------
+race: minoritized
+              precision    recall  f1-score   support
+
+    positive       0.35      0.07      0.11       288
+    negative       0.73      0.41      0.52       690
+     neutral       0.03      0.79      0.06        24
+
+    accuracy                           0.32      1002
+   macro avg       0.37      0.42      0.23      1002
+weighted avg       0.60      0.32      0.39      1002
+
+[[ 19  97 172]
+ [ 36 280 374]
+ [  0   5  19]]
+-----------------------------------------------------------------------------------------
+Bias
+
+gender
+
+T-test:
+Statistic: -0.608113964458711 p: 0.543194632015812
+male
+Overall Mean: 2.544311377245509
+female
+Overall Mean: 2.553892215568862
+
+race
+
+T-test:
+Statistic: 11.169048765471913 p: 2.222909931878134e-27
+race: privileged
+Overall Mean: 2.6447105788423153
+race: minoritized
+Overall Mean: 2.306387225548902

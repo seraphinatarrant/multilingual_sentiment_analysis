@@ -1,11 +1,26 @@
 import argparse
+import re
+import sys
+from math import ceil
+
 import yaml
+import os
+from datetime import datetime
+from tqdm import tqdm
 
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
 import torch
-from datasets import load_dataset, load_metric, ClassLabel
-from transformers import AutoTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
+from datasets import load_dataset, load_metric, ClassLabel, interleave_datasets, concatenate_datasets, DatasetDict, \
+    load_from_disk
+from datasets.utils.info_utils import NonMatchingSplitsSizesError
+from transformers import AutoTokenizer, BertForSequenceClassification, Trainer, TrainingArguments, AdamW, \
+    get_constant_schedule_with_warmup, get_linear_schedule_with_warmup
+import wandb
+
+from utils.model_utils import load_model_and_tokenizer
+from utils.data_utils import us_reviews_cat, us_reviews_columns, marc_reviews_colummns
+from utils.custom_trainer import CustomTrainer
 
 labels = ClassLabel(names=[str(i) for i in range(1, 6)])
 
@@ -18,64 +33,229 @@ def compute_metrics(pred):
     precision, recall, f1, support = precision_recall_fscore_support(gold_labels, preds, average='macro')
     acc = metric.compute(references=gold_labels, predictions=preds)
     return {
-        'accuracy': acc,
+        'accuracy': acc.get("accuracy"),
         'f1': f1,
         'precision': precision,
         'recall': recall
     }
 
+def scrub(text, replacement="_"):
+    regExp = r"\b(?:[Hh]e|[Ss]he|[Hh]er|[Hh]is|[Hh]im|[Hh]ers|[Hh]imself|[Hh]erself|[Mm][Rr]|[Mm][Rr][sS]|[Mm][Ss]|[Ww]ife|[Hh]usband|[Dd]augher|[Ss]on|[Ww]oman|[Mm]an|[Gg]irl|[Bb]oy|[Ss]ister|[Bb]rother|[Mm]other|[Ff]ather|[Mm]om|[Dd]ad|[Aa]unt|[Uu]ncle|[Mm]a|[Pp]a|[Gg]irlfriend|[Bb]oyfriend)\b"
+    sections = ["review_body", "review_title"] if "review_title" in text else ["review_body", "review_headline"]
+    for section in sections:
+        s, n = re.subn(regExp, replacement, text[section])
+        text[section] = s
+        if n > 0:
+            print(n, file=sys.stderr)
+    return text
 
-def tokenize_function(examples):
+def tokenize_function_marc(examples):
     tokens = tokenizer(examples["review_body"], examples["review_title"], padding="max_length", truncation=True,
-                     max_length=500)
+                       max_length=500)
     tokens["labels"] = labels.str2int(examples["stars"])
     return tokens
 
+
+def tokenize_function_us(examples):
+    tokens = tokenizer(examples["review_body"], examples["review_headline"], padding="max_length", truncation=True,
+                       max_length=500)
+    tokens["labels"] = labels.str2int(examples["star_rating"])
+    return tokens
+
+
 def setup_argparse():
     p = argparse.ArgumentParser()
-    p.add_argument('-l', dest='lang', help='')
-    p.add_argument('--model_loc', default="models/model_loc.yaml", help="yaml of locations of all the models")
+    p.add_argument('-l', '--lang', choices=['de', 'ja', 'es', 'multi', 'en', 'zh', 'fr'], dest='lang', help='')
+    p.add_argument('--target_lang', help='target lang to use if different from source lang')
+    p.add_argument('--model_loc', default="config/model_loc.yaml", help="yaml of locations of all the models")
+    p.add_argument('--epochs', type=float, default=3, help="number of epochs to run")
+    p.add_argument('--batch_size', type=int, default=8)
+    p.add_argument('--seed', type=int, default=42)
+    p.add_argument('--mono_lr', type=float, default=8e-7)
+    p.add_argument('--multi_lr', type=float, default=5e-6)
+    p.add_argument('--small_test', action='store_true', help='run script on a fraction of the training set')
+    p.add_argument('--use_product_cat', action='store_true')  # TODO implement using product category
+    p.add_argument('--evaluate_only', action='store_true')
+    p.add_argument('--model_output', type=str, default='/home/ec2-user/SageMaker/efs/sgt/{}/{}_{}_{}_{}')
+    p.add_argument('--load_model', type=str, help="load an already pretrained model")
+    p.add_argument('--dataset_loc', default='/home/ec2-user/SageMaker/efs/sgt/data/')
+    p.add_argument('--load_saved_dataset', action='store_true')
+    p.add_argument('--project_name', default="fine_tuning_v3", help='name for wandb project')
+    p.add_argument('--classifier_dropout', type=float, default=0.1, help='dropout for classifier')
+    p.add_argument('--compressed', action='store_true', help='whether to use a compressed model')
+    p.add_argument('--scrub', action='store_true', help='scrub gender info with regex, only works for english')
     return p.parse_args()
+
 
 if __name__ == "__main__":
     args = setup_argparse()
-    model_loc = yaml.load(open(args.model_loc), Loader=yaml.FullLoader)
-    this_model = model_loc["base_models"][args.lang]
+    print("Training with args:")
+    print(args)
 
-    tokenizer = AutoTokenizer.from_pretrained(this_model)
-    model = BertForSequenceClassification.from_pretrained(this_model,
-                                                               num_labels=5,
-                                                               problem_type="single_label_classification")
+    if args.load_model:
+        model_path = args.load_model
+        model, tokenizer = load_model_and_tokenizer(model_path, from_path=True)
+        print(f"Loaded model from: {model_path}")
+        # get the higher level dir for saving
+        model_dir, _ = os.path.split(model_path)
+        model_output = os.path.join(model_dir, "resumed")
+        log_output = os.path.join(model_output, "logs")
+
+    else:
+        model_type = "compressed_models" if args.compressed else "models"
+
+        time_now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        lang = args.lang if args.lang != "multi" else "{}+{}".format(args.lang, args.target_lang)
+        model_output = args.model_output.format(model_type, lang, args.epochs, args.seed, time_now)
+        log_output = os.path.join(model_output, "logs")
+        for d in ["models", model_output, log_output]:
+            if not os.path.exists(d):
+                os.makedirs(d)
+
+        model, tokenizer = load_model_and_tokenizer(args.model_loc, model_type, args.lang)
+
+    model.config.classification_dropout = args.classifier_dropout
     print(model)
+    print(f'Saving to: {model_output}')
+    print("Number of Parameters:")
+    print(model.num_parameters())
 
-    # TODO add support for multilingual fine tuning
-    raw_datasets = load_dataset('amazon_reviews_multi', args.lang)
-    # Tokenize dataset, for amazon multi the sections are review_body and review_title
-    tokenized_datasets = raw_datasets.map(tokenize_function, batched=True)
+    # if language is multilingual, need to first pretrain on English and then fine tune as a second load in step
+    data_lang = args.target_lang if args.lang == "multi" else args.lang
+
+    if args.load_saved_dataset:
+        tokenized_datasets = load_from_disk(args.dataset_loc)
+
+    else:
+        raw_datasets = load_dataset('amazon_reviews_multi', data_lang)
+
+        if args.scrub:
+            print("Scrubbing data", file=sys.stderr)
+            raw_datasets = raw_datasets.map(scrub)
+        # Tokenize dataset, for amazon multi the sections are review_body and review_title
+        tokenized_datasets = raw_datasets.map(tokenize_function_marc, batched=True,
+                                              remove_columns=marc_reviews_colummns)
+
     # Rename fields
-    #tokenized_datasets = tokenized_datasets.map(lambda examples: {'labels': examples['stars']}, batched=True)
+    # tokenized_datasets = tokenized_datasets.map(lambda examples: {'labels': examples['stars']}, batched=True)
 
     # format dataset object types
-    tokenized_datasets.set_format(type='torch', columns=['input_ids', 'token_type_ids', 'attention_mask', 'labels'])
+    if 'token_type_ids' in tokenized_datasets.column_names['train']:
+        dataset_columns = ['input_ids', 'token_type_ids', 'attention_mask', 'labels']
+    else:
+        dataset_columns = ['input_ids', 'attention_mask', 'labels']
+
+    tokenized_datasets.set_format(type='torch', columns=dataset_columns)
     # .map(ClassLabel
 
-    small_train_dataset = tokenized_datasets["train"].shuffle(seed=42).select(range(1000))
-    small_eval_dataset = tokenized_datasets["test"].shuffle(seed=42).select(range(1000))
-    full_train_dataset = tokenized_datasets["train"]
-    full_eval_dataset = tokenized_datasets["test"]
-    print(full_train_dataset.column_names)
+    train_dataset = tokenized_datasets["train"]
+    eval_dataset = tokenized_datasets["validation"]
+    test_dataset = tokenized_datasets["test"]
+
+    # also need to load a larger dataset with different strings (if was not already processed)
+    if not args.load_saved_dataset and args.lang == "multi" and args.target_lang == "en":
+        additional_datasets = []
+        for cat in tqdm(us_reviews_cat):
+            print(f"Loading {cat}...")
+            try:
+                us_dataset = load_dataset('amazon_us_reviews', cat)
+            except NonMatchingSplitsSizesError:
+                try:  # file may be corrupted, try to redownload
+                    us_dataset = load_dataset('amazon_us_reviews', cat, download_mode="force_redownload")
+                except:  # if this happens frequently it could be a bad config so could try ignore_verifications=True, but then have to check that the dataset is non-empty + valid another way
+                    print(f"Skipping {cat}")
+                    continue
+            if args.scrub:
+                print("Scrubbing data", file=sys.stderr)
+                us_dataset = us_dataset.map(scrub)
+            tokenized_us = us_dataset.map(tokenize_function_us, batched=True, remove_columns=us_reviews_columns)
+            # halve the dataset
+            keep_lose = tokenized_us["train"].train_test_split(test_size=0.5, shuffle=False, seed=42)
+            # 5% test + eval
+            train_test = keep_lose["train"].train_test_split(test_size=0.05, seed=42)
+            # split again
+            test_valid = train_test['test'].train_test_split(test_size=0.5, seed=42)
+            # gather into DatasetDict
+            train_test_valid_dataset = DatasetDict({
+                'train': train_test['train'],
+                'test': test_valid['test'],
+                'validation': test_valid['train']})
+            additional_datasets.append(train_test_valid_dataset)
+        additional_datasets.append(tokenized_datasets)
+
+        # interleave everything and overwrite old dataset splits
+        train_dataset = interleave_datasets([d["train"] for d in additional_datasets])
+        eval_dataset = interleave_datasets([d["validation"] for d in additional_datasets])
+        test_dataset = interleave_datasets([d["test"] for d in additional_datasets])
+
+    #         new_dataset = DatasetDict({
+    #                 'train': train_dataset,
+    #                 'test': test_dataset,
+    #                 'validation': eval_dataset})
+    #         print("Saving...")
+    #         new_dataset.save_to_disk(args.dataset_loc)
+
+    if args.small_test:
+        train_dataset = train_dataset.shuffle(seed=args.seed).select(range(1000))
+        eval_dataset = eval_dataset.shuffle(seed=args.seed).select(range(1000))
+        test_dataset = test_dataset.shuffle(seed=args.seed).select(range(1000))
+
+    print(train_dataset.column_names)
+
+    ### Set args based on language type
+    lr = args.mono_lr if args.lang != "multi" else args.multi_lr
+    steps_per_epoch = 3570 if args.lang != "multi" else 33150
+    eval_every = 510
 
     # fine tune
-    training_args = TrainingArguments(output_dir="models/", evaluation_strategy="epoch", save_strategy="epoch",
-                                      logging_strategy="epoch", save_total_limit="5", load_best_model_at_end=True)
-    trainer = Trainer(
-        model=model, args=training_args, train_dataset=small_train_dataset, eval_dataset=small_eval_dataset,
-        compute_metrics=compute_metrics
-    )
+    training_args = TrainingArguments(output_dir=model_output,
+                                      evaluation_strategy="steps",
+                                      eval_steps=eval_every,
+                                      save_strategy="epoch",#"steps",
+                                      #save_steps=steps_per_epoch,
+                                      logging_strategy="steps",
+                                      logging_steps=eval_every,
+                                      logging_dir=log_output,
+                                      save_total_limit=15,
+                                      #load_best_model_at_end=True,
+                                      per_device_train_batch_size=args.batch_size,
+                                      num_train_epochs=args.epochs,
+                                      seed=args.seed,
+                                      weight_decay=0.01,
+                                      warmup_steps=500,
+                                      learning_rate=lr,
+                                      report_to="wandb")
+    if args.load_model:
+        wandb.init(project=args.project_name, name=f"{args.lang}_{args.seed}_resume", resume=True)
+        training_args.resume_from_checkpoint = model_path
+    else:
+        wandb.init(project=args.project_name, name=f"{args.lang}_{args.seed}")
 
-    trainer.train()
-    trainer.evaluate()
+    num_train_steps = ceil(len(train_dataset)/args.batch_size)
+    optimiser = AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    scheduler = get_constant_schedule_with_warmup(optimiser, 500) if args.lang != "multi" else get_linear_schedule_with_warmup(optimiser, 500, num_train_steps)
+    optimisers = optimiser, scheduler
 
-    # save pretrained model (and tokenizer?) and make sure that it's
+    if args.lang == "ja" and args.compressed: # handling for a weird memory issue with japanese compressed models
+        trainer = CustomTrainer(
+            model=model, args=training_args, train_dataset=train_dataset, eval_dataset=eval_dataset,
+            compute_metrics=compute_metrics,
+            optimizers=(optimisers)
+        )
+    else:
+        trainer = Trainer(
+            model=model, args=training_args, train_dataset=train_dataset, eval_dataset=eval_dataset,
+            compute_metrics=compute_metrics,
+            optimizers=(optimisers)
+        )
+
+    if not args.evaluate_only:
+        trainer.train()
+
+    metrics = trainer.evaluate()
+    for key, val in metrics.items():
+        print('{}: {:.4f}'.format(key, val))
+
+    wandb.finish()
 
 

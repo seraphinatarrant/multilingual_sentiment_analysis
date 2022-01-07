@@ -1,0 +1,8 @@
+model_lang: de
+test_lang: de
+model_dirs:
+  - models/de_3_42
+  - models/de_3_55
+  - models/de_3_66
+
+

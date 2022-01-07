@@ -1,0 +1,9 @@
+model_lang: de
+test_lang: de
+model_dirs:
+  - /home/ec2-user/SageMaker/efs/sgt/models/de_15.0_0_2021_10_21_06_56_43
+  - /home/ec2-user/SageMaker/efs/sgt/models/de_15.0_26_2021_10_20_06_47_38
+  - /home/ec2-user/SageMaker/efs/sgt/models/de_15.0_42_2021_10_20_14_50_28
+  - /home/ec2-user/SageMaker/efs/sgt/models/de_15.0_5_2021_10_19_22_43_23
+  - /home/ec2-user/SageMaker/efs/sgt/models/de_15.0_63_2021_10_20_22_53_32
+

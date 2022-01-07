@@ -1,0 +1,8 @@
+model_lang: multi
+test_lang: zh
+model_dirs:
+  - /home/ec2-user/SageMaker/efs/sgt/models/multi+en_6.0_5_2021_10_23_20_21_29
+  - /home/ec2-user/SageMaker/efs/sgt/models/multi+en_6.0_42_2021_10_21_14_19_12
+  - /home/ec2-user/SageMaker/efs/sgt/models/multi+en_6.0_26_2021_10_26_01_59_56
+  - /home/ec2-user/SageMaker/efs/sgt/models/multi+en_6.0_0_2021_10_27_20_20_08
+  - /home/ec2-user/SageMaker/efs/sgt/models/multi+en_6.0_63_2021_10_25_14_47_53

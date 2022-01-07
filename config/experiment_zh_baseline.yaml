@@ -1,0 +1,8 @@
+model_lang: zh
+test_lang: zh
+model_dirs:
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/zh_0_1
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/zh_0_2
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/zh_0_3
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/zh_0_4
+  - /home/ec2-user/SageMaker/efs/sgt/baseline_models/zh_0_5

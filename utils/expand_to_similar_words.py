@@ -2,7 +2,7 @@ import argparse
 
 import numpy
 import spacy
-from collections import defaultdict
+from corpus import defaultdict
 
 
 seed_words_en = ["angry", "sad", "scared", "happy"]
