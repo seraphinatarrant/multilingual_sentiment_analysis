@@ -1,45 +1,46 @@
 import argparse
+import os
 
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-lang2convergence = {
-    "de": 35720, #36720,
-    "es": 35720, #35190, #OR 41310, 0.61
-    "ja": 42864, #44370,
-    "zh": 35720, #35190,
-    "en": 28576, #27050,
-    "en_scrubbed": 25000, #26520
-    #"multi": 100644, # 78540,
-}
-baseline_pattern = "/home/ec2-user/SageMaker/efs/sgt/results/baseline/{}/{}_ensemble.csv"
+from utils.model_utils import lang2convergence, compressed2convergence, multi_convergence, \
+    compressed_multi_convergence
 
-pattern = "/home/ec2-user/SageMaker/efs/sgt/results/{}/{}_ensemble.csv"
-multi_pattern = "/home/ec2-user/SageMaker/efs/sgt/results/{}/multi+en_{}_ensemble.csv"
-
-    
 def setup_argparse():
     p = argparse.ArgumentParser()
     p.add_argument('--baseline', action='store_true')
+    p.add_argument('--compressed', action='store_true')
+    p.add_argument('-o', dest='output_dir', default='analysis/plot_all/', help='output dir')
     
     return p.parse_args()
     
 if __name__ == "__main__":
     args = setup_argparse()
-    
+
+    baseline_pattern = "results/baseline/{}/{}_ensemble.csv"
+    pattern = "results/{}/{}_ensemble.csv"
+    multi_pattern = "results/{}/multi+en_{}_ensemble.csv"
+
+    if args.compressed:
+        pattern = "results/compressed/{}/{}_ensemble.csv"
+        multi_pattern = "results/compressed/{}/multi+en_{}_ensemble.csv"
+
     master_df = pd.DataFrame()
     #y_axis = (-0.2, 0.4) # min and max of the output
     y_axis = (-0.4, 0.8)
-    
+
+    convergence_dict = compressed2convergence if args.compressed else lang2convergence
+
     if not args.baseline:
-        for lang, steps in lang2convergence.items():
+        for lang, steps in convergence_dict.items():
             print(lang)
             df = pd.read_csv(pattern.format(lang, lang))
             #print(df)
             if lang == "en_scrubbed":
                 df["lang"] = "en_s"
-            mask = df["steps"] == lang2convergence[lang]
+            mask = df["steps"] == convergence_dict[lang]
             df = df[mask]
             master_df = master_df.append(df)
             #myplot = sns.scatterplot(data=df, x="steps", y="performance_gap")
@@ -47,17 +48,16 @@ if __name__ == "__main__":
         mask = master_df["bias_type"] == "rank"
         master_df = master_df[~mask]
 
-
         # add column
         master_df["mono_multi"] = "mono"
 
         master_df_multi = pd.DataFrame()
-        for lang, steps in lang2convergence.items():
+        for lang, steps in convergence_dict.items():
             if lang == "en_scrubbed":
                 continue
             print(lang)
             df = pd.read_csv(multi_pattern.format(lang, lang))
-            mask = df["steps"] == 100644
+            mask = df["steps"] == compressed_multi_convergence if args.compressed else multi_convergence
             df = df[mask]
             #print(set(df['lang'].values))
             master_df_multi = master_df_multi.append(df)
@@ -85,11 +85,11 @@ if __name__ == "__main__":
             myplot.tick_params(left=False)
             myplot.axhline(0.0, linestyle=":", color="gray")
             plt.ylim(*y_axis)
-            plt.savefig(f"all_data_{m}.pdf")
+            plt.savefig(os.path.join(args.output_dir, f"all_data_{m}.pdf"))
             plt.clf()
     
     else:
-        for lang in lang2convergence.keys():
+        for lang in convergence_dict.keys():
             df = pd.read_csv(baseline_pattern.format(lang, lang))
             #print(df)
             if lang == "en_scrubbed":
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         myplot = sns.scatterplot(data=sig_df, x="lang", y="performance_gap", color="black", marker="x", s=100)
         myplot.axhline(0.0, linestyle=":", color="gray")
         plt.ylim(*y_axis)
-        plt.savefig("all_data_baseline.pdf")
+        plt.savefig(os.path.join(args.output_dir,"all_data_baseline.pdf"))
         plt.clf()
 
             
