@@ -60,7 +60,7 @@ if __name__ == "__main__":
     for key in star_buckets:
         balanced_dataset.extend(random.sample(star_buckets[key], max_samples))
 
-    remaining_per = len(balanced_dataset)/len(master_dataset["train"])*100
+    remaining_per = len(balanced_dataset)/len(master_dataset)*100
     print(f"Final Dataset is {remaining_per}% of original.")
 
     new_dataset = DatasetDict({"train": balanced_dataset})
