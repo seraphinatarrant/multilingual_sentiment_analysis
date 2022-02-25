@@ -152,48 +152,18 @@ if __name__ == "__main__":
     eval_dataset = tokenized_datasets["validation"]
     test_dataset = tokenized_datasets["test"]
 
-    # also need to load a larger dataset with different strings (if was not already processed)
+    # also need to load a larger dataset with different strings, from disk location
     if not args.load_saved_dataset and args.lang == "multi" and args.target_lang == "en":
-        additional_datasets = []
-        for cat in tqdm(us_reviews_cat):
-            print(f"Loading {cat}...")
-            try:
-                us_dataset = load_dataset('amazon_us_reviews', cat)
-            except NonMatchingSplitsSizesError:
-                try:  # file may be corrupted, try to redownload
-                    us_dataset = load_dataset('amazon_us_reviews', cat, download_mode="force_redownload")
-                except:  # if this happens frequently it could be a bad config so could try ignore_verifications=True, but then have to check that the dataset is non-empty + valid another way
-                    print(f"Skipping {cat}")
-                    continue
-            if args.scrub:
-                print("Scrubbing data", file=sys.stderr)
-                us_dataset = us_dataset.map(scrub)
-            tokenized_us = us_dataset.map(tokenize_function_us, batched=True, remove_columns=us_reviews_columns)
-            # halve the dataset
-            keep_lose = tokenized_us["train"].train_test_split(test_size=0.5, shuffle=False, seed=42)
-            # 5% test + eval
-            train_test = keep_lose["train"].train_test_split(test_size=0.05, seed=42)
-            # split again
-            test_valid = train_test['test'].train_test_split(test_size=0.5, seed=42)
-            # gather into DatasetDict
-            train_test_valid_dataset = DatasetDict({
-                'train': train_test['train'],
-                'test': test_valid['test'],
-                'validation': test_valid['train']})
-            additional_datasets.append(train_test_valid_dataset)
-        additional_datasets.append(tokenized_datasets)
+        # If multilingual, dataset_loc needs to be set to where the multilingual dataset lives
+        us_dataset = load_from_disk(args.dataset_loc)
+        tokenized_us = us_dataset.map(tokenize_function_us, batched=True,
+                                      remove_columns=us_reviews_columns)
+        all_datasets = [tokenized_us, tokenized_datasets]
 
-        # interleave everything and overwrite old dataset splits
-        train_dataset = interleave_datasets([d["train"] for d in additional_datasets])
-        eval_dataset = interleave_datasets([d["validation"] for d in additional_datasets])
-        test_dataset = interleave_datasets([d["test"] for d in additional_datasets])
+        train_dataset = interleave_datasets([d["train"] for d in all_datasets])
+        eval_dataset = interleave_datasets([d["validation"] for d in all_datasets])
+        test_dataset = interleave_datasets([d["test"] for d in all_datasets])
 
-    #         new_dataset = DatasetDict({
-    #                 'train': train_dataset,
-    #                 'test': test_dataset,
-    #                 'validation': eval_dataset})
-    #         print("Saving...")
-    #         new_dataset.save_to_disk(args.dataset_loc)
 
     if args.small_test:
         train_dataset = train_dataset.shuffle(seed=args.seed).select(range(1000))
