@@ -4,6 +4,27 @@ import json
 from transformers import AutoTokenizer, BertForSequenceClassification, DistilBertTokenizer, \
     DistilBertForSequenceClassification, pipeline, AutoModelForSequenceClassification
 
+# Stores number of steps at which each model converged
+
+lang2convergence = {
+    "de": 35720, #36720,
+    "es": 35720, #35190, #OR 41310, 0.61
+    "ja": 42864, #44370,
+    "zh": 35720, #35190,
+    "en": 28576, #27050,
+    "en_scrubbed": 25000, #26520
+}
+multi_convergence = 100644
+
+compressed2convergence = {
+    "de": 52621,
+    #"es": ,
+    "ja": 60436,
+    "zh": 43750,
+    "en": 44285,
+    "en_scrubbed": 17193
+}
+compressed_multi_convergence = 78280
 
 def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: str = "",
                              from_path: bool = False, return_pipeline: bool = False):
