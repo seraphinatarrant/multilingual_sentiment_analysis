@@ -9,7 +9,7 @@ Does scrub if flag is set.
 import argparse
 import os
 from collections import defaultdict
-from random import random
+import random
 
 import yaml
 import sys
@@ -43,15 +43,16 @@ if __name__ == "__main__":
             except:  # if this happens frequently it could be a bad config so could try ignore_verifications=True, but then have to check that the dataset is non-empty + valid another way
                 print(f"Skipping {cat}")
                 continue
-        all_datasets.extend(us_dataset)
+        all_datasets.append(us_dataset)
 
     master_dataset = interleave_datasets([d["train"] for d in all_datasets])
 
     ### now balance the labels
+    print("Balancing...")
     balanced_dataset = []
     # sort them into 5 buckets for each label
     star_buckets = defaultdict(list)
-    for entry in master_dataset["train"]:
+    for entry in tqdm(master_dataset):
         star_buckets[entry["star_rating"]].append(entry)
 
     # take the entirety of the smallest one
