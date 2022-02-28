@@ -17,7 +17,9 @@ import sys
 from datasets.utils.info_utils import NonMatchingSplitsSizesError
 from tqdm import tqdm
 
-from datasets import load_dataset, interleave_datasets, DatasetDict
+
+import pandas as pd
+from datasets import load_dataset, interleave_datasets, DatasetDict, Dataset
 from utils.data_utils import us_reviews_cat
 from fine_tune_models import scrub
 
@@ -30,7 +32,8 @@ def setup_argparse():
 
 if __name__ == "__main__":
     args = setup_argparse()
-
+    print(args)
+    
     all_datasets = []
     for cat in tqdm(us_reviews_cat):
         print(f"Loading {cat}...")
@@ -63,10 +66,10 @@ if __name__ == "__main__":
     remaining_per = len(balanced_dataset)/len(master_dataset)*100
     print(f"Final Dataset is {remaining_per}% of original.")
 
-    new_dataset = DatasetDict({"train": balanced_dataset})
+    new_dataset = Dataset.from_pandas(pd.DataFrame(balanced_dataset))
 
     # 5% test + eval
-    train_test = new_dataset["train"].train_test_split(test_size=0.05, seed=42)
+    train_test = new_dataset.train_test_split(test_size=0.05, seed=42)
     # split again
     test_valid = train_test['test'].train_test_split(test_size=0.5, seed=42)
     # gather into DatasetDict
