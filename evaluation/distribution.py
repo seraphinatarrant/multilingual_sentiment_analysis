@@ -19,7 +19,15 @@ def setup_argparse():
     p.add_argument('-r', dest='results_dir', default="results/{}/full_output/")
     p.add_argument('--convergence', action='store_true', help="only graph models at convergence")
     p.add_argument('--compressed', action='store_true', help='only used if convergence is true')
+    p.add_argument('--baseline', action='store_true')
     return p.parse_args()
+
+
+def plot_and_save(vals, out_name):
+    myplot = sns.histplot(data=vals, discrete=True)
+    plt.savefig(out_name)
+    plt.clf()
+
 
 if __name__ == "__main__":
     args = setup_argparse()
@@ -34,6 +42,19 @@ if __name__ == "__main__":
     }
 
     dists = []
+
+    if args.baseline:
+        # Will be much simpler since all baseline results are already at convergence, this is mostly duplicate code
+        prefix = args.results_dir.format(f'baseline/{args.lang}')
+        pattern = patterns["mono"]
+
+        df = pd.read_csv(os.path.join(prefix, pattern))
+        vals = np.concatenate([df["label_1"].to_numpy(), df["label_2"].to_numpy()])
+        print(len(vals))
+        output_name = f"{args.lang}_predictions.pdf"
+        plot_and_save(vals, os.path.join(args.output, output_name))
+
+
     if args.convergence:
         if args.compressed:
             convergence_dict = compressed2convergence
@@ -43,17 +64,16 @@ if __name__ == "__main__":
 
     for key in patterns.keys():
         df = pd.read_csv(os.path.join(prefix, patterns[key]))
-        if key == "multi":
-            mask = df["steps"] == multi_convergence
-        else:
-            mask = df["steps"] == convergence_dict[args.lang]
-        df = df[mask]
+        if args.convergence:
+            if key == "multi":
+                mask = df["steps"] == multi_convergence
+            else:
+                mask = df["steps"] == convergence_dict[args.lang]
+            df = df[mask]
         vals = np.concatenate([df["label_1"].to_numpy(), df["label_2"].to_numpy()])
         print(len(vals))
-        myplot = sns.histplot(data=vals, discrete=True)
-        output_name = f"{args.lang}_predictions.pdf" if key =="mono" else f"multi_{args.lang}_predictions.pdf"
-        plt.savefig(os.path.join(args.output, output_name))
-        plt.clf()
+        output_name = f"{args.lang}_predictions.pdf" if key == "mono" else f"multi_{args.lang}_predictions.pdf"
+        plot_and_save(vals, os.path.join(args.output, output_name))
         dists.append(vals)
 
     print(wasserstein_distance(dists[0], dists[1]))
