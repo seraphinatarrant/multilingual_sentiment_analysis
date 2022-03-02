@@ -45,7 +45,6 @@ if __name__ == "__main__":
 
     if args.baseline:
         # Will be much simpler since all baseline results are already at convergence, this is mostly duplicate code
-        prefix = args.results_dir.format(f'baseline/{args.lang}')
         pattern = patterns["mono"]
 
         df = pd.read_csv(os.path.join(prefix, pattern))
