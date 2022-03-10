@@ -1,0 +1,8 @@
+model_lang: multi
+test_lang: en
+model_dirs:
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_0_2022_03_02_15_04_01/checkpoint-75000
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_26_2022_03_03_14_39_56/checkpoint-75000
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_42_2022_03_03_14_39_35/checkpoint-75000
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_63_2022_03_03_14_35_54/checkpoint-75000
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_5_2022_03_08_23_12_04/checkpoint-75000
