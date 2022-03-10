@@ -157,7 +157,10 @@ if __name__ == "__main__":
         csv_base = CSV_BASE.format(lang, seed) if model_lang == test_lang else CSV_BASE.format(f'{lang}_{test_lang}', seed)
         csv_name, csv_emo_name = os.path.join(args.output, csv_base + ".csv"), os.path.join(args.output, csv_base + "_emotion.csv")
         # put full output in different dir
-        csv_labels_name, csv_labels_emo_name = os.path.join(args.output, "full_output", csv_base + "_all_data.csv"), os.path.join(args.output, "full_output", csv_base + "_all_data_emotion.csv")
+        full_output_dir = os.path.join(args.output, "full_output")
+        if not os.path.exists(full_output_dir):
+            os.makedirs(full_output_dir)
+        csv_labels_name, csv_labels_emo_name = os.path.join(full_output_dir, csv_base + "_all_data.csv"), os.path.join(full_output_dir, csv_base + "_all_data_emotion.csv")
         with open(csv_name, "w", newline='') as csvout, open(csv_emo_name, "w", newline='') as csvemo,\
             open(csv_labels_name, "w", newline='') as csv_all, open(csv_labels_emo_name, "w", newline='') as csv_all_emo:
             csv_writer, csv_emo_writer = csv.writer(csvout), csv.writer(csvemo)
@@ -263,7 +266,7 @@ if __name__ == "__main__":
 
     csv_base = CSV_BASE.format(lang, averaging_method) if model_lang == test_lang else CSV_BASE.format(f'{lang}_{test_lang}', averaging_method)
     csv_name, csv_emo_name = os.path.join(args.output, csv_base + ".csv"), os.path.join(args.output, csv_base + "_emotion.csv")
-    csv_labels_name, csv_labels_emo_name = os.path.join(args.output, "full_output", csv_base + "_all_data.csv"), os.path.join(args.output, "full_output", csv_base + "_all_data_emotion.csv")
+    csv_labels_name, csv_labels_emo_name = os.path.join(full_output_dir, csv_base + "_all_data.csv"), os.path.join(full_output_dir, csv_base + "_all_data_emotion.csv")
     with open(csv_name, "w", newline='') as csvout, open(csv_emo_name, "w", newline='') as csvemo, \
             open(csv_labels_name, "w", newline='') as csv_all, open(csv_labels_emo_name, "w", newline='') as csv_all_emo:
         csv_writer, csv_emo_writer = csv.writer(csvout), csv.writer(csvemo)
