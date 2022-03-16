@@ -15,6 +15,7 @@ lang2convergence = {
     "en_scrubbed": 25000, #26520
 }
 multi_convergence = 100644
+balanced_multi_convergence = 75000
 
 compressed2convergence = {
     "de": 52621,

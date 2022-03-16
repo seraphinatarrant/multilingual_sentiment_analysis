@@ -6,12 +6,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from utils.model_utils import lang2convergence, compressed2convergence, multi_convergence, \
-    compressed_multi_convergence
+    compressed_multi_convergence, balanced_multi_convergence
 
 def setup_argparse():
     p = argparse.ArgumentParser()
     p.add_argument('--baseline', action='store_true')
     p.add_argument('--compressed', action='store_true')
+    p.add_argument('--balanced', action='store_true')
     p.add_argument('-o', dest='output_dir', default='analysis/plot_all/', help='output dir')
     
     return p.parse_args()
@@ -26,6 +27,13 @@ if __name__ == "__main__":
     if args.compressed:
         pattern = "results/compressed/{}/{}_ensemble.csv"
         multi_pattern = "results/compressed/{}/multi+en_{}_ensemble.csv"
+
+        multi_convergence = compressed_multi_convergence
+
+    if args.balanced:
+        multi_pattern = "results/balanced/{}/multi+en_{}_ensemble.csv"
+        multi_convergence = balanced_multi_convergence
+
 
     master_df = pd.DataFrame()
     #y_axis = (-0.2, 0.4) # min and max of the output
@@ -57,7 +65,7 @@ if __name__ == "__main__":
                 continue
             print(lang)
             df = pd.read_csv(multi_pattern.format(lang, lang))
-            mask = df["steps"] == compressed_multi_convergence if args.compressed else multi_convergence
+            mask = df["steps"] == multi_convergence
             df = df[mask]
             #print(set(df['lang'].values))
             master_df_multi = master_df_multi.append(df)
