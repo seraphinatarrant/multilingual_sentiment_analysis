@@ -1,8 +1,10 @@
 import yaml
 import os
 import json
+import ipdb
+
 from transformers import AutoTokenizer, BertForSequenceClassification, DistilBertTokenizer, \
-    DistilBertForSequenceClassification, pipeline, AutoModelForSequenceClassification
+    DistilBertForSequenceClassification, pipeline, AutoModelForSequenceClassification, AutoConfig
 
 # Stores number of steps at which each model converged
 
@@ -27,6 +29,15 @@ compressed2convergence = {
 }
 compressed_multi_convergence = 78280
 
+lang2tok_cfg = {
+    "ja": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/ja",
+    "en": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/en",
+    "zh": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/zh",
+    "multi": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/multi",
+    "de": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/de",
+    "es": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/es",
+    }
+
 def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: str = "",
                              from_path: bool = False, return_pipeline: bool = False):
     if not from_path:  # in this case there is a yaml config
@@ -42,11 +53,17 @@ def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: st
             cfg = json.load(fin)
             tok_path = cfg["_name_or_path"]
 
-    tokenizer = AutoTokenizer.from_pretrained(tok_path)  # this way it autodetects the tokenizer from pretrained model
-    model = AutoModelForSequenceClassification.from_pretrained(this_model,
+    slurm = True
+    if slurm == True:
+        this_model = os.path.join('/home/s1948359/multilingual_sentiment_analysis/models/pretrained', this_model)
+        #tokenizer_path = lang2tok_cfg[lang]
+        #print("tokenizer path, model path")
+        #print(tokenizer_path, this_model)
+        cfg = AutoConfig.from_pretrained(this_model)
+        tokenizer = AutoTokenizer.from_pretrained(this_model, config=cfg)  # this way it autodetects the tokenizer from pretrained model
+        model = AutoModelForSequenceClassification.from_pretrained(this_model,
                                                                num_labels=5,
                                                                problem_type="single_label_classification")
-
     # there's an inference error when other tokenizers are use because of an extraneous token_type_ids that the tokenizer returns but distilbert does not use.
     if model.base_model_prefix == "distilbert" and type(tokenizer) != DistilBertTokenizer:
         tokenizer.model_input_names = ['input_ids', 'attention_mask']
