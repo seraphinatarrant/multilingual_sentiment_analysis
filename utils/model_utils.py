@@ -26,6 +26,7 @@ compressed2convergence = {
     "en_scrubbed": 17193
 }
 compressed_multi_convergence = 78280
+compressed_balanced_multi_convergence = 33336
 
 def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: str = "",
                              from_path: bool = False, return_pipeline: bool = False):
