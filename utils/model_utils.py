@@ -28,6 +28,7 @@ compressed2convergence = {
     "en_scrubbed": 17193
 }
 compressed_multi_convergence = 78280
+compressed_balanced_multi_convergence = 33336
 
 lang2tok_cfg = {
     "ja": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/ja",

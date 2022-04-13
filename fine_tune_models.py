@@ -77,7 +77,7 @@ def setup_argparse():
     p.add_argument('--batch_size', type=int, default=8)
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--mono_lr', type=float, default=8e-7)
-    p.add_argument('--multi_lr', type=float, default=5e-6)
+    p.add_argument('--transfer_lr', type=float, default=5e-6)
     p.add_argument('--small_test', action='store_true', help='run script on a fraction of the training set')
     p.add_argument('--use_product_cat', action='store_true')  # TODO implement using product category
     p.add_argument('--evaluate_only', action='store_true')
@@ -89,6 +89,7 @@ def setup_argparse():
     p.add_argument('--classifier_dropout', type=float, default=0.1, help='dropout for classifier')
     p.add_argument('--compressed', action='store_true', help='whether to use a compressed model')
     p.add_argument('--scrub', action='store_true', help='scrub gender info with regex, only works for english')
+    p.add_argument('--xl_transfer', action='store_true', help='use large amounts of english data for training')
     return p.parse_args()
 
 
@@ -165,7 +166,7 @@ if __name__ == "__main__":
     test_dataset = tokenized_datasets["test"]
 
     # also need to load a larger dataset with different strings, from disk location
-    if not args.load_saved_dataset and args.lang == "multi" and args.target_lang == "en":
+    if not args.load_saved_dataset and args.lang == "multi" and args.target_lang == "en" and args.xl_transfer:
         # If multilingual, dataset_loc needs to be set to where the multilingual dataset lives
         us_dataset = load_from_disk(args.dataset_loc)
         tokenized_us = us_dataset.map(tokenize_function_us, batched=True,
@@ -185,8 +186,8 @@ if __name__ == "__main__":
     print(train_dataset.column_names)
 
     ### Set args based on language type
-    lr = args.mono_lr if args.lang != "multi" else args.multi_lr
-    steps_per_epoch = 3570 if args.lang != "multi" else 33150
+    lr = args.mono_lr if not args.xl_transfer else args.transfer_lr
+    steps_per_epoch = 3570 if not args.xl_transfer else 33150
     eval_every = 510
 
     # fine tune
@@ -215,7 +216,7 @@ if __name__ == "__main__":
 
     num_train_steps = ceil(len(train_dataset)/args.batch_size)
     optimiser = AdamW(model.parameters(), lr=lr, weight_decay=0.01)
-    scheduler = get_constant_schedule_with_warmup(optimiser, 500) if args.lang != "multi" else get_linear_schedule_with_warmup(optimiser, 500, num_train_steps)
+    scheduler = get_constant_schedule_with_warmup(optimiser, 500) if not args.xl_transfer else get_linear_schedule_with_warmup(optimiser, 500, num_train_steps)
     optimisers = optimiser, scheduler
 
     if args.lang == "ja" and args.compressed: # handling for a weird memory issue with japanese compressed models
