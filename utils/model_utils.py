@@ -40,6 +40,8 @@ lang2tok_cfg = {
 
 def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: str = "",
                              from_path: bool = False, return_pipeline: bool = False):
+
+    slurm = True
     if not from_path:  # in this case there is a yaml config
 
         model_loc = yaml.load(open(model_location), Loader=yaml.FullLoader)
@@ -47,23 +49,26 @@ def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: st
         tok_path = this_model
         print(this_model)
 
+        
+        if slurm == True:
+            this_model = os.path.join('/home/s1948359/multilingual_sentiment_analysis/models/pretrained', this_model)
+            cfg = AutoConfig.from_pretrained(this_model)
+            tokenizer = AutoTokenizer.from_pretrained(this_model, config=cfg) 
+             
     else:
+        #ipdb.set_trace()
         this_model = model_location  # there is a checkpoint locally to load
         with open(os.path.join(model_location, "config.json"), "r") as fin:
             cfg = json.load(fin)
             tok_path = cfg["_name_or_path"]
 
-    slurm = True
-    if slurm == True:
-        this_model = os.path.join('/home/s1948359/multilingual_sentiment_analysis/models/pretrained', this_model)
-        #tokenizer_path = lang2tok_cfg[lang]
-        #print("tokenizer path, model path")
-        #print(tokenizer_path, this_model)
-        cfg = AutoConfig.from_pretrained(this_model)
-        tokenizer = AutoTokenizer.from_pretrained(this_model, config=cfg)  # this way it autodetects the tokenizer from pretrained model
-        model = AutoModelForSequenceClassification.from_pretrained(this_model,
+        tokenizer = AutoTokenizer.from_pretrained(tok_path) 
+        
+    model = AutoModelForSequenceClassification.from_pretrained(this_model,
                                                                num_labels=5,
                                                                problem_type="single_label_classification")
+
+    print("Model and Tokenizer: {} {}".format(this_model, tokenizer))
     # there's an inference error when other tokenizers are use because of an extraneous token_type_ids that the tokenizer returns but distilbert does not use.
     if model.base_model_prefix == "distilbert" and type(tokenizer) != DistilBertTokenizer:
         tokenizer.model_input_names = ['input_ids', 'attention_mask']
