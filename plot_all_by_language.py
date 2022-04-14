@@ -68,8 +68,12 @@ if __name__ == "__main__":
 
     for model_type, file_pattern in type2filepattern.items():
             print(model_type)
-            df = pd.read_csv(file_pattern.format(args.lang, args.lang))
-            #print(df)
+            try:
+                infile = file_pattern.format(args.lang, args.lang)
+                df = pd.read_csv(infile)
+            except:
+                print("Couldn't read in file, may not exist: {}".format(infile), file=sys.stderr)
+                continue
             if args.lang == "en_scrubbed":
                 df["lang"] = "en_s"
             if model_type != "baseline":
@@ -86,12 +90,13 @@ if __name__ == "__main__":
     # stat sig
     significance_mask = master_df["statistical_significance"] > (0.05/num_models)
     sig_df = master_df[significance_mask]
-    myplot = sns.scatterplot(data=master_df, x="model_type", y="performance_gap", hue="bias_type", order=type_order)
-    myplot = sns.scatterplot(data=sig_df, x="model_type", y="performance_gap", color="black", s=100, order=type_order)
+    myplot = sns.stripplot(data=master_df, x="model_type", y="performance_gap", hue="bias_type", order=type_order)
+    myplot = sns.stripplot(data=sig_df, x="model_type", y="performance_gap", color="black", s=100, order=type_order, marker="x")
     #myplot.set(ylabel=None, yticklabels=[])
     #myplot.tick_params(left=False)
     myplot.axhline(0.0, linestyle=":", color="gray")
-    #plt.ylim(*y_axis)
+    plt.xticks(rotation=90)
+    plt.ylim(*y_axis)
     plt.savefig(os.path.join(args.output_dir, f"all_models_{args.lang}.pdf"))
     #plt.clf()
     
