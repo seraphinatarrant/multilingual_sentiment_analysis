@@ -43,7 +43,6 @@ iso2name = {
 lang2bias = {
     "ja": {
         "gender": ["male", "female"],
-        "rank": ["rank: privileged", "rank: minoritized"],
         "race": ["race: privileged", "race: minoritized"]
     },
     "de": {
