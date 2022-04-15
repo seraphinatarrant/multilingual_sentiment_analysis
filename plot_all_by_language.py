@@ -5,9 +5,12 @@ import sys
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from plotnine import ggplot, aes, geom_count
 
 from utils.model_utils import lang2convergence, compressed2convergence, multi_convergence, \
     compressed_multi_convergence, balanced_multi_convergence, compressed_balanced_multi_convergence
+
+from evaluation.create_eval_set import lang2bias
 
 def get_convergence_by_type(model_type, lang):
     """
@@ -19,13 +22,13 @@ def get_convergence_by_type(model_type, lang):
         steps = lang2convergence[lang]
     elif model_type == "multi_xl":
         steps = multi_convergence
-    elif model_type == "mono_compressed":
+    elif model_type == "mono_c":
         steps = compressed2convergence[lang]
-    elif model_type == "multi_xl_compressed":
+    elif model_type == "multi_xl_c":
         steps = compressed_multi_convergence
-    elif model_type == "multi_xl_balanced":
+    elif model_type == "multi_xl_b":
         steps = balanced_multi_convergence
-    elif model_type == "multi_xl_compressed_balanced":
+    elif model_type == "multi_xl_c_b":
         steps = compressed_balanced_multi_convergence
     else:
         sys.exit("Not a valid model type to check for convergence: {}".format(model_type))
@@ -37,7 +40,7 @@ def setup_argparse():
     p = argparse.ArgumentParser()
     p.add_argument('-l', '--lang', dest='lang')
     p.add_argument('-o', dest='output_dir', default='analysis/plot_all/', help='output dir')
-    p.add_argument('-pt', '--plot_type', choices=['swarm', 'scatter'], default="swarm")
+    p.add_argument('-pt', '--plot_type', choices=['swarm', 'scatter', 'bubble'], default="swarm")
 
     return p.parse_args()
 
@@ -61,12 +64,14 @@ if __name__ == "__main__":
     }
 
     insert = "full_output"
-    if args.plot_type == "strip":
+    file_insert = "_all_data"
+    if args.plot_type == "swarm":
         for key, val in type2filepattern.items():
             _path, _filename = os.path.split(val)
-            new_val = os.path.join(_path, insert, _filename)
+            _file, _ext = os.path.splitext(_filename)
+            new_filename = _file + file_insert + _ext
+            new_val = os.path.join(_path, insert, new_filename)
             type2filepattern[key] = new_val
-
         y_axis = (-4, 4)
 
     else:
@@ -98,21 +103,38 @@ if __name__ == "__main__":
     mask = master_df["bias_type"] == "rank"
     master_df = master_df[~mask]
 
-    myplot = sns.swarmplot(data=master_df, x="model_type", y="performance_gap", hue="bias_type", order=type_order)
+    # break out by bias_type
+    lang = args.lang if args.lang != "en_scrubbed" else "en"
+    bias_types = lang2bias[lang]
+    for bt in bias_types.keys():
+        # get sub dataframe for one bias type
+        mask = master_df["bias_type"] == bt
+        this_df = master_df[mask]
+        # set colour based on bias type
+        if bt == "gender":
+            colour = "mediumblue"
+        elif bt == "race":
+            colour = "firebrick"
 
-    if args.plot_type == "scatter":
-        # stat sig
-        significance_mask = master_df["statistical_significance"] > (0.05/num_models)
-        sig_df = master_df[significance_mask]
-        myplot = sns.swarmplot(data=sig_df, x="model_type", y="performance_gap", color="black", s=100, order=type_order, marker="x")
-    #myplot.set(ylabel=None, yticklabels=[])
-    #myplot.tick_params(left=False)
-    myplot.axhline(0.0, linestyle=":", color="gray")
-    plt.xticks(rotation=90)
-    plt.ylim(*y_axis)
-    plt.savefig(os.path.join(args.output_dir, f"all_models_{args.lang}.pdf"))
-    #plt.clf()
-    
+        # set output filename
+        outfile = os.path.join(args.output_dir, f"all_models_{args.lang}_{bt}.pdf")
 
-
+        if args.plot_type == "bubble":
+            myplot = ggplot(this_df, aes(x="lang", y="performance_gap")) + geom_count(color=colour)
+            myplot.save(outfile)
+        else:
+            myplot = sns.stripplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order, jitter=True, dodge=True)
+            if args.plot_type == "scatter":
+                # stat sig
+                significance_mask = this_df["statistical_significance"] > (0.05/num_models)
+                sig_df = this_df[significance_mask]
+                myplot = sns.stripplot(data=sig_df, x="model_type", y="performance_gap", color="black", s=100, order=type_order, marker="x")
+            #myplot.set(ylabel=None, yticklabels=[])
+            #myplot.tick_params(left=False)
+            myplot.axhline(0.0, linestyle=":", color="gray")
+            plt.xticks(rotation=90)
+            plt.ylim(*y_axis)
+            plt.subplots_adjust(bottom=0.28)
+            plt.savefig(outfile)
+            plt.clf()
             
