@@ -101,6 +101,7 @@ if __name__ == "__main__":
     model_type = "compressed_models" if args.compressed else "models"
     lang = args.lang if args.lang != "multi" else "{}+{}".format(args.lang, args.target_lang)
     time_now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    
     if args.load_model:
         model_path = args.load_model
         model, tokenizer = load_model_and_tokenizer(model_path, from_path=True)
@@ -112,9 +113,7 @@ if __name__ == "__main__":
 
     else:
         model_type = "compressed_models" if args.compressed else "models"
-
         time_now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        lang = args.lang if args.lang != "multi" else "{}+{}".format(args.lang, args.target_lang)
         model_output = args.model_output.format(model_type, lang, args.epochs, args.seed, time_now)
         log_output = os.path.join(model_output, "logs")
         model, tokenizer = load_model_and_tokenizer(args.model_loc, model_type, args.lang)
@@ -212,7 +211,7 @@ if __name__ == "__main__":
         wandb.init(project=args.project_name, name=f"{args.lang}_{args.seed}_resume", resume=True)
         training_args.resume_from_checkpoint = model_path
     else:
-        wandb.init(project=args.project_name, name=f"{args.lang}_{args.seed}")
+        wandb.init(project=args.project_name, name=f"{lang}_{args.seed}")
 
     num_train_steps = ceil(len(train_dataset)/args.batch_size)
     optimiser = AdamW(model.parameters(), lr=lr, weight_decay=0.01)
