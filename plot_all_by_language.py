@@ -40,7 +40,8 @@ def setup_argparse():
     p = argparse.ArgumentParser()
     p.add_argument('-l', '--lang', dest='lang')
     p.add_argument('-o', dest='output_dir', default='analysis/plot_all/', help='output dir')
-    p.add_argument('-pt', '--plot_type', choices=['swarm', 'scatter', 'bubble'], default="swarm")
+    p.add_argument('-pt', '--plot_type', choices=['swarm', 'scatter', 'bubble', 'violin', "strip"],
+                   default="swarm")
 
     return p.parse_args()
 
@@ -65,7 +66,7 @@ if __name__ == "__main__":
 
     insert = "full_output"
     file_insert = "_all_data"
-    if args.plot_type == "swarm":
+    if args.plot_type != "scatter":
         for key, val in type2filepattern.items():
             _path, _filename = os.path.split(val)
             _file, _ext = os.path.splitext(_filename)
@@ -120,16 +121,24 @@ if __name__ == "__main__":
         outfile = os.path.join(args.output_dir, f"all_models_{args.lang}_{bt}.pdf")
 
         if args.plot_type == "bubble":
-            myplot = ggplot(this_df, aes(x="lang", y="performance_gap")) + geom_count(color=colour)
+            myplot = ggplot(this_df, aes(x="model_type", y="performance_gap")) + geom_count(color=colour)
             myplot.save(outfile)
         else:
-            myplot = sns.stripplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order, jitter=True, dodge=True)
-            if args.plot_type == "scatter":
-                # stat sig
-                significance_mask = this_df["statistical_significance"] > (0.05/num_models)
-                sig_df = this_df[significance_mask]
-                myplot = sns.stripplot(data=sig_df, x="model_type", y="performance_gap", color="black", s=100, order=type_order, marker="x")
-            #myplot.set(ylabel=None, yticklabels=[])
+            if args.plot_type == "violin":
+                myplot = sns.violinplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order)
+            elif args.plot_type == 'strip':
+                myplot = sns.stripplot(data=this_df, x="model_type", y="performance_gap",
+                                       color=colour, order=type_order, linestyle='',
+                                       err_style='bars')
+            else:
+                myplot = sns.stripplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order, jitter=True, dodge=True)
+                if args.plot_type == "scatter":
+                    # stat sig
+                    significance_mask = this_df["statistical_significance"] > (0.05/num_models)
+                    sig_df = this_df[significance_mask]
+                    myplot = sns.stripplot(data=sig_df, x="model_type", y="performance_gap", color="black", s=100, order=type_order, marker="x")
+            myplot.set(ylabel=None)#, yticklabels=[])
+            myplot.set(xlabel=None)
             #myplot.tick_params(left=False)
             myplot.axhline(0.0, linestyle=":", color="gray")
             plt.xticks(rotation=90)
