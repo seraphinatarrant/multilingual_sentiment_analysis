@@ -5,6 +5,7 @@ import sys
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from plotnine import ggplot, aes, geom_count
 
 from utils.model_utils import lang2convergence, compressed2convergence, multi_convergence, \
     compressed_multi_convergence, balanced_multi_convergence, compressed_balanced_multi_convergence
@@ -39,7 +40,7 @@ def setup_argparse():
     p = argparse.ArgumentParser()
     p.add_argument('-l', '--lang', dest='lang')
     p.add_argument('-o', dest='output_dir', default='analysis/plot_all/', help='output dir')
-    p.add_argument('-pt', '--plot_type', choices=['swarm', 'scatter'], default="swarm")
+    p.add_argument('-pt', '--plot_type', choices=['swarm', 'scatter', 'bubble', 'violin'], default="swarm")
 
     return p.parse_args()
 
@@ -64,7 +65,7 @@ if __name__ == "__main__":
 
     insert = "full_output"
     file_insert = "_all_data"
-    if args.plot_type == "swarm":
+    if args.plot_type != "scatter":
         for key, val in type2filepattern.items():
             _path, _filename = os.path.split(val)
             _file, _ext = os.path.splitext(_filename)
@@ -106,24 +107,38 @@ if __name__ == "__main__":
     lang = args.lang if args.lang != "en_scrubbed" else "en"
     bias_types = lang2bias[lang]
     for bt in bias_types.keys():
+        # get sub dataframe for one bias type
+        mask = master_df["bias_type"] == bt
+        this_df = master_df[mask]
+        # set colour based on bias type
         if bt == "gender":
             colour = "mediumblue"
         elif bt == "race":
             colour = "firebrick"
-        mask = master_df["bias_type"] == bt
-        this_df = master_df[mask]
-        myplot = sns.stripplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order, jitter=True, dodge=True)
-        if args.plot_type == "scatter":
-            # stat sig
-            significance_mask = this_df["statistical_significance"] > (0.05/num_models)
-            sig_df = this_df[significance_mask]
-            myplot = sns.stripplot(data=sig_df, x="model_type", y="performance_gap", color="black", s=100, order=type_order, marker="x")
-        #myplot.set(ylabel=None, yticklabels=[])
-        #myplot.tick_params(left=False)
-        myplot.axhline(0.0, linestyle=":", color="gray")
-        plt.xticks(rotation=90)
-        plt.ylim(*y_axis)
-        plt.subplots_adjust(bottom=0.28)
-        plt.savefig(os.path.join(args.output_dir, f"all_models_{args.lang}_{bt}.pdf"))
-        plt.clf()
+
+        # set output filename
+        outfile = os.path.join(args.output_dir, f"all_models_{args.lang}_{bt}.pdf")
+
+        if args.plot_type == "bubble":
+            myplot = ggplot(this_df, aes(x="model_type", y="performance_gap")) + geom_count(color=colour)
+            myplot.save(outfile)
+        else:
+            if args.plot_type == "violin":
+                myplot = sns.violinplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order)
+            else:
+                myplot = sns.stripplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order, jitter=True, dodge=True)
+                if args.plot_type == "scatter":
+                    # stat sig
+                    significance_mask = this_df["statistical_significance"] > (0.05/num_models)
+                    sig_df = this_df[significance_mask]
+                    myplot = sns.stripplot(data=sig_df, x="model_type", y="performance_gap", color="black", s=100, order=type_order, marker="x")
+            myplot.set(ylabel=None)#, yticklabels=[])
+            myplot.set(xlabel=None)
+            #myplot.tick_params(left=False)
+            myplot.axhline(0.0, linestyle=":", color="gray")
+            plt.xticks(rotation=90)
+            plt.ylim(*y_axis)
+            plt.subplots_adjust(bottom=0.28)
+            plt.savefig(outfile)
+            plt.clf()
             
