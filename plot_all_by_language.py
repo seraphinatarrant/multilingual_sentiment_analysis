@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import ipdb
 
 import pandas as pd
 import seaborn as sns
@@ -40,7 +41,8 @@ def setup_argparse():
     p = argparse.ArgumentParser()
     p.add_argument('-l', '--lang', dest='lang')
     p.add_argument('-o', dest='output_dir', default='analysis/plot_all/', help='output dir')
-    p.add_argument('-pt', '--plot_type', choices=['swarm', 'scatter', 'bubble', 'violin'], default="swarm")
+    p.add_argument('-pt', '--plot_type', choices=['swarm', 'scatter', 'bubble', 'violin', "errbars"],
+                   default="swarm")
 
     return p.parse_args()
 
@@ -50,12 +52,13 @@ if __name__ == "__main__":
 
     print(args)
 
-    type_order = ["baseline", "mono", "mono_c", "multi_xl",
+    type_order = ["baseline", "mono", "mono_multi","mono_c", "multi_xl",
                   "multi_xl_c", "multi_xl_b", "multi_xl_c_b"]
 
     type2filepattern = {
         "baseline": "results/baseline/{}/{}_ensemble.csv",
         "mono": "results/{}/{}_ensemble.csv",
+        "mono_multi": "results/mono_multi/{}/multi+{}_{}_ensemble.csv",
         "multi_xl": "results/{}/multi+en_{}_ensemble.csv",
         "mono_c": "results/compressed/{}/{}_ensemble.csv",
         "multi_xl_c": "results/compressed/{}/multi+en_{}_ensemble.csv",
@@ -72,10 +75,11 @@ if __name__ == "__main__":
             new_filename = _file + file_insert + _ext
             new_val = os.path.join(_path, insert, new_filename)
             type2filepattern[key] = new_val
-        y_axis = (-4, 4)
+    if args.plot_type == "scatter" or args.plot_type == "errbars":
+        y_axis = (-0.4, 0.8) # set empirically based on average gaps  
 
     else:
-        y_axis = (-0.4, 0.8) # set empirically based on average gaps
+        y_axis = (-4, 4)
 
     num_models = len(type2filepattern)
 
@@ -97,8 +101,7 @@ if __name__ == "__main__":
                 mask = df["steps"] == convergence_steps
                 df = df[mask]
             df["model_type"] = model_type
-            master_df = master_df.append(df)
-            #myplot = sns.scatterplot(data=df, x="steps", y="performance_gap")
+            master_df = master_df.append(df, ignore_index=True)
 
     mask = master_df["bias_type"] == "rank"
     master_df = master_df[~mask]
@@ -125,6 +128,11 @@ if __name__ == "__main__":
         else:
             if args.plot_type == "violin":
                 myplot = sns.violinplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order)
+            elif args.plot_type == 'errbars':
+                #ipdb.set_trace()
+                myplot = sns.lineplot(data=this_df, x="model_type", y="performance_gap",
+                                       color=colour, linestyle='',
+                                       err_style='bars', marker='o')
             else:
                 myplot = sns.stripplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order, jitter=True, dodge=True)
                 if args.plot_type == "scatter":
