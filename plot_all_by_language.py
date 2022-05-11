@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from plotnine import ggplot, aes, geom_count
 
 from utils.model_utils import lang2convergence, compressed2convergence, multi_convergence, \
-    compressed_multi_convergence, balanced_multi_convergence, compressed_balanced_multi_convergence
+    compressed_multi_convergence, balanced_multi_convergence, compressed_balanced_multi_convergence, mono_multi2convergence
 
 from evaluation.create_eval_set import lang2bias
 
@@ -31,6 +31,8 @@ def get_convergence_by_type(model_type, lang):
         steps = balanced_multi_convergence
     elif model_type == "multi_xl_c_b":
         steps = compressed_balanced_multi_convergence
+    elif model_type == "mono_multi":
+        steps = mono_multi2convergence[lang]
     else:
         sys.exit("Not a valid model type to check for convergence: {}".format(model_type))
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
 
     print(args)
 
-    type_order = ["baseline", "mono", "mono_multi","mono_c", "multi_xl",
+    type_order = ["baseline", "mono", "mono_multi", "mono_c", "multi_xl",
                   "multi_xl_c", "multi_xl_b", "multi_xl_c_b"]
 
     type2filepattern = {
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     for model_type, file_pattern in type2filepattern.items():
             print(model_type)
             try:
-                infile = file_pattern.format(args.lang, args.lang)
+                infile = file_pattern.format(args.lang, args.lang) if model_type != "mono_multi" else file_pattern.format(args.lang, args.lang, args.lang)
                 df = pd.read_csv(infile)
             except:
                 print("Couldn't read in file, may not exist: {}".format(infile), file=sys.stderr)
@@ -143,6 +145,10 @@ if __name__ == "__main__":
             myplot.set(ylabel=None)#, yticklabels=[])
             myplot.set(xlabel=None)
             #myplot.tick_params(left=False)
+            if args.plot_type == "errbars" or args.plot_type == "scatter":
+                myplot.axhspan(0.1,-0.1,alpha=0.2)
+                #myplot.axhline(0.12, linestyle="--", color="gray")
+                #myplot.axhline(-0.12, linestyle="--", color="gray")
             myplot.axhline(0.0, linestyle=":", color="gray")
             plt.xticks(rotation=90)
             plt.ylim(*y_axis)
