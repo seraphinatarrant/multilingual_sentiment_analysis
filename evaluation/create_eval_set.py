@@ -50,7 +50,8 @@ lang2bias = {
         "race": ["race: privileged", "race: minoritized"]
     },
     "es": {
-        "gender": ["male", "female"]
+        "gender": ["male", "female"],
+        "race": ["race: privileged", "race: minoritized"]
     },
     "zh": {
         "gender": ["male", "female"]
@@ -215,7 +216,7 @@ def fill_people(cat2sents: Dict, people_sheet, lang:str, person_emotion_agreemen
                         person1_type, person2_type = map(str.strip, row[6:8])
                         # the grammar type values should be keys in the Sentence grammar2string dict
                         new_sent1 = re.sub(grammar2pattern[grammar_type], person1, sent.grammar2string[person1_type])
-                        new_sent2 = re.sub(grammar2pattern[grammar_type], person1, sent.grammar2string[person2_type])
+                        new_sent2 = re.sub(grammar2pattern[grammar_type], person2, sent.grammar2string[person2_type])
                     else:
                         new_sent1 = re.sub(grammar2pattern[grammar_type], person1, sent.text)
                         new_sent2 = re.sub(grammar2pattern[grammar_type], person2, sent.text)
