@@ -46,6 +46,7 @@ def setup_argparse():
     p.add_argument('-o', dest='output_dir', default='analysis/plot_all/', help='output dir')
     p.add_argument('-pt', '--plot_type', choices=['heatmap', 'scatter', 'bubble', 'violin', "errbars"],
                    default="errbars")
+    p.add_argument('--polarity', action='store_true', help='use results that have been preconverted to polarity')
 
     return p.parse_args()
 
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     }
 
     insert = "full_output"
-    file_insert = "_all_data"
+    file_insert = "_all_data_emotion_polarity" if args.polarity else "_all_data"
     if args.plot_type != "scatter":
         for key, val in type2filepattern.items():
             _path, _filename = os.path.split(val)
@@ -78,9 +79,11 @@ if __name__ == "__main__":
             new_filename = _file + file_insert + _ext
             new_val = os.path.join(_path, insert, new_filename)
             type2filepattern[key] = new_val
-    if args.plot_type == "scatter" or args.plot_type == "errbars":
-        y_axis = (-0.4, 0.8) # set empirically based on average gaps  
 
+    if args.polarity:
+        pass # TODO empirically set y_axis
+    elif args.plot_type == "scatter" or args.plot_type == "errbars":
+        y_axis = (-0.4, 0.8) # set empirically based on average gaps
     else:
         y_axis = (-4, 4)
 
