@@ -53,6 +53,7 @@ def get_label_from_emotion(emotion_cat):
     if emotion_cat == "joy":
         return "positive"
 
+
 def convert_to_polarity(label):
     if label > 3:
         return "positive"
@@ -61,3 +62,11 @@ def convert_to_polarity(label):
     else:
         return "neutral"
 
+
+def polarity_string2int(label):
+    if label == "positive":
+        return 1
+    if label == "negative":
+        return -1
+    if label == "neutral":
+        return 0
