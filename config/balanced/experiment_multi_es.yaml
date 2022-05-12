@@ -1,8 +1,8 @@
 model_lang: multi
 test_lang: es
 model_dirs:
-  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_0_2022_03_02_15_04_01/
-  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_26_2022_03_03_14_39_56/
-  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_42_2022_03_03_14_39_35/
-  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_63_2022_03_03_14_35_54/
-  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_5_2022_03_08_23_12_04/
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_42_2022_04_06_21_35_10
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_26_2022_04_05_14_02_32
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_0_2022_04_05_13_28_54
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_63_2022_04_12_12_40_39
+  - /home/s1948359/multilingual_sentiment_analysis/models/multi+en_6.0_5_2022_04_12_12_40_39
