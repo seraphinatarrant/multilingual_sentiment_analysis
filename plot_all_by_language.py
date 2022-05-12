@@ -47,6 +47,8 @@ def setup_argparse():
     p.add_argument('-pt', '--plot_type', choices=['heatmap', 'scatter', 'bubble', 'violin', "errbars"],
                    default="errbars")
     p.add_argument('--polarity', action='store_true', help='use results that have been preconverted to polarity')
+    p.add_argument('--include_gold', action='store_true', help='if doing polarity, can also include '
+                                                               'gold results, currently only works with heatmap')
 
     return p.parse_args()
 
@@ -135,21 +137,34 @@ if __name__ == "__main__":
                 mask = this_df["model_type"] == model_type
                 model_df = this_df[mask]
                 # make confusion matrix and also a zero'd along the diagonal confusion matrix for the agreements (so colours easier to see)
-                cm = metrics.confusion_matrix(model_df["label_1"].values, model_df["label_2"].values,
+                if args.include_gold:
+                    # confusion matrix is the diff between the matrices for privileged and not privileged
+                    cm1 = metrics.confusion_matrix(model_df["gold_label_int"].values,
+                                                   model_df["label_1"].values,
+                                                   labels=labels)
+                    cm2 = metrics.confusion_matrix(model_df["gold_label_int"].values,
+                                                   model_df["label_2"].values,
+                                                   labels=labels)
+                    cm = cm1 - cm2
+
+                else:
+                    cm = metrics.confusion_matrix(model_df["label_1"].values, model_df["label_2"].values,
                                               labels=labels)
-                cm_mod = cm.copy()
-                for i in range(5):
-                    cm_mod[i][i] = 0
+                    #include also a mod version so that the non-agreements are informative
+                    cm_mod = cm.copy()
+                    for i in range(5):
+                        cm_mod[i][i] = 0
+                    myplot = sns.heatmap(cm_mod, xticklabels=labels, yticklabels=labels)
+                    outfile_mod = outfile = os.path.join(args.output_dir,
+                                                         f"{args.lang}_{bt}_{model_type}_zeroes.pdf")
+                    plt.savefig(outfile_mod)
+                    plt.clf()
+
                 myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels)
                 outfile = os.path.join(args.output_dir, f"{args.lang}_{bt}_{model_type}.pdf")
                 plt.savefig(outfile)
                 plt.clf()
-                
-                myplot = sns.heatmap(cm_mod, xticklabels=labels, yticklabels=labels)
-                outfile_mod = outfile = os.path.join(args.output_dir,
-                                                     f"{args.lang}_{bt}_{model_type}_zeroes.pdf")
-                plt.savefig(outfile_mod)
-                plt.clf()
+
         else:
             # set output filename
             outfile = os.path.join(args.output_dir, f"all_models_{args.lang}_{bt}.pdf")
