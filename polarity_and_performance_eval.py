@@ -48,6 +48,7 @@ if __name__ == "__main__":
         gold_labels = df['emotion'].apply(get_label_from_emotion)
         df['gold_label'] = gold_labels
 
+        df['gold_label_int'] = df['gold_label'].apply(polarity_string2int)
         prev_filename, ext = os.path.splitext(file_name)
 
         if args.save:
@@ -55,6 +56,7 @@ if __name__ == "__main__":
                 df[label] = df[label].apply(polarity_string2int)
             # need to recalculate performance gap on new scale
             df["performance_gap"] = df["label_1"] - df["label_2"]
+
             new_filename = prev_filename + "_polarity" + ext
             new_filepath = os.path.join(args.results_dir, new_filename)
             print(f"Saving {new_filepath}")

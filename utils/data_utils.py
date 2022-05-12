@@ -26,7 +26,7 @@ CSV_BASE = "{}_{}" # lang_seed or lang_overall
 
 # write out data for boxplots or violinplots, with all labels
 LABEL_HEADERS = ["label_1", "label_2", "performance_gap", "bias_cat_1", "bias_cat_2", "bias_type", "steps", "lang"]
-EVAL_CORPUS_PATH = "evaluation/corpora/EEC_{}.json"
+EVAL_CORPUS_PATH = "/home/s1948359/multilingual_sentiment_analysis/evaluation/corpora/EEC_{}.json"
 
 
 def load_corpus(lang):
@@ -70,3 +70,4 @@ def polarity_string2int(label):
         return 0
     if label == "neutral":
         return 1
+

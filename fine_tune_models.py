@@ -24,9 +24,14 @@ from utils.custom_trainer import CustomTrainer
 
 labels = ClassLabel(names=[str(i) for i in range(1, 6)])
 
+local_metric_path = "/home/s1948359/multilingual_sentiment_analysis/evaluation/accuracy.py"
 
 def compute_metrics(pred):
-    metric = load_metric("accuracy")
+    slurm=True
+    if slurm:
+        metric = load_metric(local_metric_path)
+    else:
+        metric = load_metric("accuracy")
     gold_labels = pred.label_ids
     preds = pred.predictions.argmax(-1)
     # macro average ok since dataset should be balanced, need to change if change datasets
@@ -76,7 +81,7 @@ def setup_argparse():
     p.add_argument('--small_test', action='store_true', help='run script on a fraction of the training set')
     p.add_argument('--use_product_cat', action='store_true')  # TODO implement using product category
     p.add_argument('--evaluate_only', action='store_true')
-    p.add_argument('--model_output', type=str, default='/home/ec2-user/SageMaker/efs/sgt/{}/{}_{}_{}_{}')
+    p.add_argument('--model_output', type=str, default='~/models/{}/{}_{}_{}_{}')
     p.add_argument('--load_model', type=str, help="load an already pretrained model")
     p.add_argument('--dataset_loc', default='/home/ec2-user/SageMaker/efs/sgt/data/')
     p.add_argument('--load_saved_dataset', action='store_true')
@@ -93,28 +98,30 @@ if __name__ == "__main__":
     print("Training with args:")
     print(args)
 
+    model_type = "compressed_models" if args.compressed else "models"
+    lang = args.lang if args.lang != "multi" else "{}+{}".format(args.lang, args.target_lang)
+    time_now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    
     if args.load_model:
         model_path = args.load_model
         model, tokenizer = load_model_and_tokenizer(model_path, from_path=True)
         print(f"Loaded model from: {model_path}")
         # get the higher level dir for saving
         model_dir, _ = os.path.split(model_path)
-        model_output = os.path.join(model_dir, "resumed")
+        model_output = os.path.join(args.model_output.format(model_type, lang, args.epochs, args.seed, time_now), "resumed")
         log_output = os.path.join(model_output, "logs")
 
     else:
         model_type = "compressed_models" if args.compressed else "models"
-
         time_now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        lang = args.lang if args.lang != "multi" else "{}+{}".format(args.lang, args.target_lang)
         model_output = args.model_output.format(model_type, lang, args.epochs, args.seed, time_now)
         log_output = os.path.join(model_output, "logs")
-        for d in ["models", model_output, log_output]:
-            if not os.path.exists(d):
-                os.makedirs(d)
-
         model, tokenizer = load_model_and_tokenizer(args.model_loc, model_type, args.lang)
 
+    for d in ["models", model_output, log_output]:
+        if not os.path.exists(d):
+            os.makedirs(d)
+                                
     model.config.classification_dropout = args.classifier_dropout
     print(model)
     print(f'Saving to: {model_output}')
@@ -128,7 +135,11 @@ if __name__ == "__main__":
         tokenized_datasets = load_from_disk(args.dataset_loc)
 
     else:
-        raw_datasets = load_dataset('amazon_reviews_multi', data_lang)
+        slurm = True
+        if slurm == True:
+            raw_datasets = load_from_disk(os.path.join('/home/s1948359/data/amazon_reviews_multi', data_lang))
+        else:    
+            raw_datasets = load_dataset('amazon_reviews_multi', data_lang)
 
         if args.scrub:
             print("Scrubbing data", file=sys.stderr)
@@ -200,7 +211,7 @@ if __name__ == "__main__":
         wandb.init(project=args.project_name, name=f"{args.lang}_{args.seed}_resume", resume=True)
         training_args.resume_from_checkpoint = model_path
     else:
-        wandb.init(project=args.project_name, name=f"{args.lang}_{args.seed}")
+        wandb.init(project=args.project_name, name=f"{lang}_{args.seed}")
 
     num_train_steps = ceil(len(train_dataset)/args.batch_size)
     optimiser = AdamW(model.parameters(), lr=lr, weight_decay=0.01)

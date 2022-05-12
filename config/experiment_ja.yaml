@@ -1,8 +1,8 @@
 model_lang: ja
 test_lang: ja
 model_dirs:
-  - /home/ec2-user/SageMaker/efs/sgt/models/ja_15.0_0_2021_10_20_00_26_14
-  - /home/ec2-user/SageMaker/efs/sgt/models/ja_15.0_26_2021_10_18_23_46_47
-  - /home/ec2-user/SageMaker/efs/sgt/models/ja_15.0_42_2021_10_19_07_59_30
-  - /home/ec2-user/SageMaker/efs/sgt/models/ja_15.0_5_2021_10_18_15_33_37
-  - /home/ec2-user/SageMaker/efs/sgt/models/ja_15.0_63_2021_10_19_16_13_30
+  - /home/s1948359/multilingual_sentiment_analysis/models/ja_15.0_0_2021_10_20_00_26_14
+  - /home/s1948359/multilingual_sentiment_analysis/models/ja_15.0_26_2021_10_18_23_46_47
+  - /home/s1948359/multilingual_sentiment_analysis/models/ja_15.0_42_2021_10_19_07_59_30
+  - /home/s1948359/multilingual_sentiment_analysis/models/ja_15.0_5_2021_10_18_15_33_37
+  - /home/s1948359/multilingual_sentiment_analysis/models/ja_15.0_63_2021_10_19_16_13_30

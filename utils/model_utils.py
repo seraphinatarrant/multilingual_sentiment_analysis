@@ -1,8 +1,10 @@
 import yaml
 import os
 import json
+import ipdb
+
 from transformers import AutoTokenizer, BertForSequenceClassification, DistilBertTokenizer, \
-    DistilBertForSequenceClassification, pipeline, AutoModelForSequenceClassification
+    DistilBertForSequenceClassification, pipeline, AutoModelForSequenceClassification, AutoConfig
 
 # Stores number of steps at which each model converged
 
@@ -14,8 +16,19 @@ lang2convergence = {
     "en": 28576, #27050,
     "en_scrubbed": 25000, #26520
 }
+
 multi_convergence = 100644
 balanced_multi_convergence = 75000
+
+
+mono_multi2convergence = {
+    "de": 81250,
+    "en": 87500,
+    "es": 93750,
+    "ja": 93750,
+    "zh": 93750
+    }
+
 
 compressed2convergence = {
     "de": 52621,
@@ -28,8 +41,19 @@ compressed2convergence = {
 compressed_multi_convergence = 78280
 compressed_balanced_multi_convergence = 33336
 
+lang2tok_cfg = {
+    "ja": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/ja",
+    "en": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/en",
+    "zh": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/zh",
+    "multi": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/multi",
+    "de": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/de",
+    "es": "/home/s1948359/multilingual_sentiment_analysis/models/tokenizers/es",
+    }
+
 def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: str = "",
                              from_path: bool = False, return_pipeline: bool = False):
+
+    slurm = True
     if not from_path:  # in this case there is a yaml config
 
         model_loc = yaml.load(open(model_location), Loader=yaml.FullLoader)
@@ -37,17 +61,26 @@ def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: st
         tok_path = this_model
         print(this_model)
 
+        
+        if slurm == True:
+            this_model = os.path.join('/home/s1948359/multilingual_sentiment_analysis/models/pretrained', this_model)
+            cfg = AutoConfig.from_pretrained(this_model)
+            tokenizer = AutoTokenizer.from_pretrained(this_model, config=cfg) 
+             
     else:
+        #ipdb.set_trace()
         this_model = model_location  # there is a checkpoint locally to load
         with open(os.path.join(model_location, "config.json"), "r") as fin:
             cfg = json.load(fin)
             tok_path = cfg["_name_or_path"]
 
-    tokenizer = AutoTokenizer.from_pretrained(tok_path)  # this way it autodetects the tokenizer from pretrained model
+        tokenizer = AutoTokenizer.from_pretrained(tok_path) 
+        
     model = AutoModelForSequenceClassification.from_pretrained(this_model,
                                                                num_labels=5,
                                                                problem_type="single_label_classification")
 
+    print("Model and Tokenizer: {} {}".format(this_model, tokenizer))
     # there's an inference error when other tokenizers are use because of an extraneous token_type_ids that the tokenizer returns but distilbert does not use.
     if model.base_model_prefix == "distilbert" and type(tokenizer) != DistilBertTokenizer:
         tokenizer.model_input_names = ['input_ids', 'attention_mask']

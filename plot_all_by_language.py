@@ -86,6 +86,7 @@ if __name__ == "__main__":
         pass # TODO empirically set y_axis
     elif args.plot_type == "scatter" or args.plot_type == "errbars":
         y_axis = (-0.4, 0.8) # set empirically based on average gaps
+
     else:
         y_axis = (-4, 4)
 
@@ -159,6 +160,7 @@ if __name__ == "__main__":
                                                          f"{args.lang}_{bt}_{model_type}_zeroes.pdf")
                     plt.savefig(outfile_mod)
                     plt.clf()
+
 
                 myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels)
                 outfile = os.path.join(args.output_dir, f"{args.lang}_{bt}_{model_type}.pdf")
