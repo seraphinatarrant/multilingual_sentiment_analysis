@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-import ipdb
+#import ipdb
 
 import pandas as pd
 import seaborn as sns
@@ -31,7 +31,7 @@ def get_convergence_by_type(model_type, lang):
         steps = balanced_multi_convergence
     elif model_type == "multi_xl_c_b":
         steps = compressed_balanced_multi_convergence
-    elif model_type == "mono_multi":
+    elif model_type == "multi_on_mono":
         steps = mono_multi2convergence[lang]
     else:
         sys.exit("Not a valid model type to check for convergence: {}".format(model_type))
@@ -54,13 +54,13 @@ if __name__ == "__main__":
 
     print(args)
 
-    type_order = ["baseline", "mono", "mono_multi", "mono_c", "multi_xl",
+    type_order = ["baseline", "mono", "multi_on_mono", "mono_c", "multi_xl",
                   "multi_xl_c", "multi_xl_b", "multi_xl_c_b"]
 
     type2filepattern = {
         "baseline": "results/baseline/{}/{}_ensemble.csv",
         "mono": "results/{}/{}_ensemble.csv",
-        "mono_multi": "results/mono_multi/{}/multi+{}_{}_ensemble.csv",
+        "multi_on_mono": "results/mono_multi/{}/multi+{}_{}_ensemble.csv",
         "multi_xl": "results/{}/multi+en_{}_ensemble.csv",
         "mono_c": "results/compressed/{}/{}_ensemble.csv",
         "multi_xl_c": "results/compressed/{}/multi+en_{}_ensemble.csv",
