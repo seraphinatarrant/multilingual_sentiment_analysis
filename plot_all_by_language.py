@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-#import ipdb
+import ipdb
 
 import pandas as pd
 import seaborn as sns
@@ -88,11 +88,11 @@ if __name__ == "__main__":
 
     # This all just makes the correct dataframes
     master_df = pd.DataFrame()
-
+    print("Gathering dataframes...")
     for model_type, file_pattern in type2filepattern.items():
             print(model_type)
             try:
-                infile = file_pattern.format(args.lang, args.lang) if model_type != "mono_multi" else file_pattern.format(args.lang, args.lang, args.lang)
+                infile = file_pattern.format(args.lang, args.lang) if model_type != "multi_on_mono" else file_pattern.format(args.lang, args.lang, args.lang)
                 df = pd.read_csv(infile)
             except:
                 print("Couldn't read in file, may not exist: {}".format(infile), file=sys.stderr)
@@ -113,6 +113,7 @@ if __name__ == "__main__":
     # break out by bias_type
     lang = args.lang if args.lang != "en_scrubbed" else "en"
     bias_types = lang2bias[lang]
+    print("Plotting...")
     for bt in bias_types.keys():
         # get sub dataframe for one bias type
         mask = master_df["bias_type"] == bt
@@ -125,12 +126,13 @@ if __name__ == "__main__":
 
         # if doing a confusion matrix heatmap, then need to also do a separate graph for each model
         if args.plot_type == "heatmap":
-            labels = list(map(str, range(1, 6)))
+            labels = range(1, 6)
             for model_type in type_order:
+                #ipdb.set_trace()
                 mask = this_df["model_type"] == model_type
                 model_df = this_df[mask]
                 # make confusion matrix and also a zero'd along the diagonal confusion matrix for the agreements (so colours easier to see)
-                cm = metrics.confusion_matrix(df["label_1"].values, df["label_2"].values,
+                cm = metrics.confusion_matrix(model_df["label_1"].values, model_df["label_2"].values,
                                               labels=labels)
                 cm_mod = cm.copy()
                 for i in range(5):
@@ -138,12 +140,13 @@ if __name__ == "__main__":
                 myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels)
                 outfile = os.path.join(args.output_dir, f"{args.lang}_{bt}_{model_type}.pdf")
                 plt.savefig(outfile)
-
-                myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels)
+                plt.clf()
+                
+                myplot = sns.heatmap(cm_mod, xticklabels=labels, yticklabels=labels)
                 outfile_mod = outfile = os.path.join(args.output_dir,
                                                      f"{args.lang}_{bt}_{model_type}_zeroes.pdf")
                 plt.savefig(outfile_mod)
-
+                plt.clf()
         else:
             # set output filename
             outfile = os.path.join(args.output_dir, f"all_models_{args.lang}_{bt}.pdf")
