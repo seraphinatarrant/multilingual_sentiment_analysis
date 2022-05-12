@@ -47,7 +47,7 @@ if __name__ == "__main__":
         # add column for gold label
         gold_labels = df['emotion'].apply(get_label_from_emotion)
         df['gold_label'] = gold_labels
-
+        df['gold_label_int'] = df['gold_label'].apply(polarity_string2int)
         prev_filename, ext = os.path.splitext(file_name)
 
         if args.save:
