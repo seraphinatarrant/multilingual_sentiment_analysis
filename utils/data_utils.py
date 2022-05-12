@@ -65,8 +65,8 @@ def convert_to_polarity(label):
 
 def polarity_string2int(label):
     if label == "positive":
-        return 1
+        return 2
     if label == "negative":
-        return -1
-    if label == "neutral":
         return 0
+    if label == "neutral":
+        return 1
