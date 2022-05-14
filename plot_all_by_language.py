@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import ipdb
+import numpy as np
 
 import pandas as pd
 import seaborn as sns
@@ -133,6 +134,7 @@ if __name__ == "__main__":
         # if doing a confusion matrix heatmap, then need to also do a separate graph for each model
         if args.plot_type == "heatmap":
             labels = range(1, 6)
+            cmap = 'Blues'
             for model_type in type_order:
                 #ipdb.set_trace()
                 mask = this_df["model_type"] == model_type
@@ -151,18 +153,23 @@ if __name__ == "__main__":
                 else:
                     cm = metrics.confusion_matrix(model_df["label_1"].values, model_df["label_2"].values,
                                               labels=labels)
-                    #include also a mod version so that the non-agreements are informative
+                    #include also a mod version so that the non-agreements are informative to set the min and max
                     cm_mod = cm.copy()
                     for i in range(5):
                         cm_mod[i][i] = 0
-                    myplot = sns.heatmap(cm_mod, xticklabels=labels, yticklabels=labels)
+                    # this is for anchoring the colour map to useful values
+                    vmin, vmax = np.min(cm_mod), np.max(cm_mod)
+                    my_cmap = plt.get_cmap(cmap).copy()
+                    my_cmap.set_over('black')
+
+                    myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels, cmap=my_cmap, vmin=vmin, vmax=vmax)
                     outfile_mod = outfile = os.path.join(args.output_dir,
-                                                         f"{args.lang}_{bt}_{model_type}_zeroes.pdf")
+                                                         f"{args.lang}_{bt}_{model_type}_cap.pdf")
                     plt.savefig(outfile_mod)
                     plt.clf()
 
 
-                myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels)
+                myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels, cmap=cmap)
                 outfile = os.path.join(args.output_dir, f"{args.lang}_{bt}_{model_type}.pdf")
                 plt.savefig(outfile)
                 plt.clf()
