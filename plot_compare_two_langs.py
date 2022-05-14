@@ -111,14 +111,21 @@ if __name__ == "__main__":
         outfile = os.path.join(args.output_dir, f"compare_langs_{args.lang}_{args.compare_lang}_{bt}")
         # make errbar plot
         y_axis = (-0.15, 0.25)
-        myplot = sns.lineplot(data=this_df, x="model_type", y="performance_gap", style="lang",
+        mask = this_df["lang"] == args.lang
+        df1 = this_df[mask]
+        df2 = this_df[~mask]
+        myplot = sns.lineplot(data=df1, x="model_type", y="performance_gap",
                               color=colour, linestyle='',
-                              err_style='bars') #, marker='o') Can manually set markers if it doesn't work well auto
+                              err_style='bars', marker='o')
+        myplot = sns.lineplot(data=df2, x="model_type", y="performance_gap",
+                              color=colour, linestyle='',
+                              err_style='bars', marker='X')
+        # TODO if don't like this, can just use hue
         myplot.axhspan(0.1, -0.1, alpha=0.2)
         myplot.axhline(0.0, linestyle=":", color="gray")
         plt.xticks(rotation=90)
         plt.ylim(*y_axis)
-        #plt.subplots_adjust(bottom=0.28)
+        plt.subplots_adjust(bottom=0.28)
         plt.savefig(outfile+"_errbars.pdf")
         plt.clf()
 
@@ -130,7 +137,7 @@ if __name__ == "__main__":
         myplot.axhline(0.0, linestyle=":", color="gray")
         plt.xticks(rotation=90)
         plt.ylim(*y_axis)
-        # plt.subplots_adjust(bottom=0.28)
+        plt.subplots_adjust(bottom=0.28)
         plt.savefig(outfile + "_violin.pdf")
         plt.clf()
 
@@ -159,6 +166,6 @@ if __name__ == "__main__":
             bias_cat_2 = list(set(model_df["bias_cat_2"].values))[0]
             plt.ylabel(bias_cat_1)
             plt.xlabel(bias_cat_2)
-            outfile = os.path.join(args.output_dir, f"compare_langs_{args.lang}_{args.compare_lang}_{model_type}.pdf")
+            outfile = os.path.join(args.output_dir, f"compare_langs_{args.lang}_{args.compare_lang}_{model_type}_{bt}.pdf")
             plt.savefig(outfile)
             plt.clf()
