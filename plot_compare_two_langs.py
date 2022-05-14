@@ -54,12 +54,7 @@ if __name__ == "__main__":
     type2filepattern = {
         "baseline": "results/baseline/{}/{}_ensemble.csv",
         "mono": "results/{}/{}_ensemble.csv",
-        "multi_on_mono": "results/mono_multi/{}/multi+{}_{}_ensemble.csv",
-        "multi_xl": "results/{}/multi+en_{}_ensemble.csv",
-        "mono_c": "results/compressed/{}/{}_ensemble.csv",
-        "multi_xl_c": "results/compressed/{}/multi+en_{}_ensemble.csv",
-        "multi_xl_b": "results/balanced/{}/multi+en_{}_ensemble.csv",
-        "multi_xl_c_b": "results/balanced/compressed/{}/multi+en_{}_ensemble.csv",
+        "mono_c": "results/compressed/{}/{}_ensemble.csv",       
     }
 
     insert = "full_output"
