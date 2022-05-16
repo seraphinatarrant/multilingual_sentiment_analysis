@@ -133,14 +133,14 @@ if __name__ == "__main__":
 
         # if doing a confusion matrix heatmap, then need to also do a separate graph for each model
         if args.plot_type == "heatmap":
-            labels = range(1, 6)
-            cmap = 'Blues'
+            labels = range(3) if args.polarity else range(1, 6)
             for model_type in type_order:
                 #ipdb.set_trace()
                 mask = this_df["model_type"] == model_type
                 model_df = this_df[mask]
                 # make confusion matrix and also a zero'd along the diagonal confusion matrix for the agreements (so colours easier to see)
                 if args.include_gold:
+                    cmap = "bwr"  # diverging cmap since looking at a diff
                     # confusion matrix is the diff between the matrices for privileged and not privileged
                     cm1 = metrics.confusion_matrix(model_df["gold_label_int"].values,
                                                    model_df["label_1"].values,
@@ -151,6 +151,7 @@ if __name__ == "__main__":
                     cm = cm1 - cm2
 
                 else:
+                    cmap = 'Blues'
                     cm = metrics.confusion_matrix(model_df["label_1"].values, model_df["label_2"].values,
                                               labels=labels)
                     #include also a mod version so that the non-agreements are informative to set the min and max
@@ -162,13 +163,16 @@ if __name__ == "__main__":
                     my_cmap = plt.get_cmap(cmap).copy()
                     my_cmap.set_over('black')
 
+                    if args.polarity:
+                        labels = ["negative", "netural", "positive"]
                     myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels, cmap=my_cmap, vmin=vmin, vmax=vmax)
                     outfile_mod = outfile = os.path.join(args.output_dir,
                                                          f"{args.lang}_{bt}_{model_type}_cap.pdf")
                     plt.savefig(outfile_mod)
                     plt.clf()
 
-
+                if args.polarity:
+                    labels = ["negative", "netural", "positive"]
                 myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels, cmap=cmap)
                 outfile = os.path.join(args.output_dir, f"{args.lang}_{bt}_{model_type}.pdf")
                 plt.savefig(outfile)
