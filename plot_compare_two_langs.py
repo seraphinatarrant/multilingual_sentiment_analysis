@@ -143,11 +143,12 @@ if __name__ == "__main__":
 
         # do confusion matrices
         # if doing a confusion matrix heatmap, then need to also do a separate graph for each model
-        labels = range(1, 6)
-        cmap = "Blues"
+        cmap = "bwr"
         print(f"Difference of {args.lang} and {args.compare_lang} (first minus second)")
         for model_type in type_order:
+            print(model_type)
             #ipdb.set_trace()
+            labels = range(3) if args.polarity else range(1, 6)
             mask = this_df["model_type"] == model_type
             model_df = this_df[mask]
             mask_lang1 = model_df["lang"] == args.lang
@@ -162,6 +163,7 @@ if __name__ == "__main__":
                                            lang2_df["label_2"].values,
                                            labels=labels)
             cm = cm1 - cm2
+            labels = ["negative","neutral", "positive"] if args.polarity else labels
             myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels, cmap=cmap)
             bias_cat_1 = list(set(model_df["bias_cat_1"].values))[0]
             bias_cat_2 = list(set(model_df["bias_cat_2"].values))[0]
