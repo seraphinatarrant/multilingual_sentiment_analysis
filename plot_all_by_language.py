@@ -7,11 +7,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib
 from plotnine import ggplot, aes, geom_count
 from sklearn import metrics
 
 from utils.model_utils import lang2convergence, compressed2convergence, multi_convergence, \
     compressed_multi_convergence, balanced_multi_convergence, compressed_balanced_multi_convergence, mono_multi2convergence
+from utils.graph_utils import get_cmap_midpoint, shifted_colormap
+
 
 from evaluation.create_eval_set import lang2bias
 
@@ -47,6 +50,7 @@ def setup_argparse():
     p.add_argument('-o', dest='output_dir', default='analysis/plot_all/', help='output dir')
     p.add_argument('-pt', '--plot_type', choices=['heatmap', 'scatter', 'bubble', 'violin', "errbars"],
                    default="errbars")
+    p.add_argument('--only_models', nargs='+', default=None, help='restrict to only this list of models') 
     p.add_argument('--polarity', action='store_true', help='use results that have been preconverted to polarity')
     p.add_argument('--include_gold', action='store_true', help='if doing polarity, can also include '
                                                                'gold results, currently only works with heatmap')
@@ -83,11 +87,13 @@ if __name__ == "__main__":
             new_val = os.path.join(_path, insert, new_filename)
             type2filepattern[key] = new_val
 
-    if args.polarity:
-        pass # TODO empirically set y_axis
-    elif args.plot_type == "scatter" or args.plot_type == "errbars":
-        y_axis = (-0.4, 0.8) # set empirically based on average gaps
-
+    if args.plot_type == "scatter" or args.plot_type == "errbars":
+        if args.polarity:
+            y_axis = (-0.2, 0.3)
+            xspan = 0.05
+        else:
+            y_axis = (-0.4, 0.8) # set empirically based on average gaps
+            xspan = 0.11
     else:
         y_axis = (-4, 4)
 
@@ -95,21 +101,28 @@ if __name__ == "__main__":
 
     # This all just makes the correct dataframes
     master_df = pd.DataFrame()
+    if args.only_models:
+        type_order = args.only_models
     print("Gathering dataframes...")
     for model_type, file_pattern in type2filepattern.items():
-            print(model_type)
-            try:
-                infile = file_pattern.format(args.lang, args.lang) if model_type != "multi_on_mono" else file_pattern.format(args.lang, args.lang, args.lang)
-                df = pd.read_csv(infile)
-            except:
-                print("Couldn't read in file, may not exist: {}".format(infile), file=sys.stderr)
+        if args.only_models:
+            if model_type not in args.only_models:
                 continue
-            if args.lang == "en_scrubbed":
-                df["lang"] = "en_s"
-            if model_type != "baseline":
-                convergence_steps = get_convergence_by_type(model_type, args.lang)
-                mask = df["steps"] == convergence_steps
-                df = df[mask]
+            
+        print(model_type)
+        try:
+            infile = file_pattern.format(args.lang, args.lang) if model_type != "multi_on_mono" else file_pattern.format(args.lang, args.lang, args.lang)
+            df = pd.read_csv(infile)
+        except:
+            print("Couldn't read in file, may not exist: {}".format(infile), file=sys.stderr)
+            type_order.remove(model_type) # make sure don't use later
+            continue
+        if args.lang == "en_scrubbed":
+            df["lang"] = "en_s"
+        if model_type != "baseline":
+            convergence_steps = get_convergence_by_type(model_type, args.lang)
+            mask = df["steps"] == convergence_steps
+            df = df[mask]
             df["model_type"] = model_type
             master_df = master_df.append(df, ignore_index=True)
 
@@ -133,14 +146,19 @@ if __name__ == "__main__":
 
         # if doing a confusion matrix heatmap, then need to also do a separate graph for each model
         if args.plot_type == "heatmap":
-            labels = range(3) if args.polarity else range(1, 6)
             for model_type in type_order:
-                #ipdb.set_trace()
+                print(model_type)
+                labels = range(3) if args.polarity else range(1, 6)
                 mask = this_df["model_type"] == model_type
                 model_df = this_df[mask]
+                if len(model_df.index) == 0:
+                    print(f"Skipping {model_type}, no data for it")
+                    continue
+                # to use for labelling later
+                bias_cat_1 = list(set(model_df["bias_cat_1"].values))[0]
+                bias_cat_2 = list(set(model_df["bias_cat_2"].values))[0]
                 # make confusion matrix and also a zero'd along the diagonal confusion matrix for the agreements (so colours easier to see)
                 if args.include_gold:
-                    cmap = "bwr"  # diverging cmap since looking at a diff
                     # confusion matrix is the diff between the matrices for privileged and not privileged
                     cm1 = metrics.confusion_matrix(model_df["gold_label_int"].values,
                                                    model_df["label_1"].values,
@@ -149,32 +167,47 @@ if __name__ == "__main__":
                                                    model_df["label_2"].values,
                                                    labels=labels)
                     cm = cm1 - cm2
-
+                    ylabel = "gold"
+                    xlabel = "predicted"
+                    # make new cmap to be sure to anchor it to white as zero
+                    cmap = plt.cm.bwr  # diverging cmap since looking at a diff
+                    vmin, vmax = np.min(cm), np.max(cm)
+                    cmap = shifted_colormap(cmap, midpoint=get_cmap_midpoint(vmin, vmax), name=f'{args.lang}_{bt}_{model_type}_cmap')
+                    
                 else:
                     cmap = 'Blues'
+                    ylabel = bias_cat_1
+                    xlabel = bias_cat_2
                     cm = metrics.confusion_matrix(model_df["label_1"].values, model_df["label_2"].values,
                                               labels=labels)
                     #include also a mod version so that the non-agreements are informative to set the min and max
                     cm_mod = cm.copy()
-                    for i in range(5):
+                    cm_max = cm.copy()
+                    all_max = np.max(cm)
+                    for i in range(len(labels)):
                         cm_mod[i][i] = 0
+                        cm_max[i][i] = all_max # so that ensure it is black
                     # this is for anchoring the colour map to useful values
                     vmin, vmax = np.min(cm_mod), np.max(cm_mod)
                     my_cmap = plt.get_cmap(cmap).copy()
                     my_cmap.set_over('black')
 
                     if args.polarity:
-                        labels = ["negative", "netural", "positive"]
-                    myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels, cmap=my_cmap, vmin=vmin, vmax=vmax)
-                    outfile_mod = outfile = os.path.join(args.output_dir,
+                        labels = ["negative", "neutral", "positive"]
+                    myplot = sns.heatmap(cm_max, xticklabels=labels, yticklabels=labels, cmap=my_cmap, vmin=vmin, vmax=vmax)
+                    outfile_mod  = os.path.join(args.output_dir,
                                                          f"{args.lang}_{bt}_{model_type}_cap.pdf")
+                    plt.ylabel(ylabel)
+                    plt.xlabel(xlabel)
                     plt.savefig(outfile_mod)
                     plt.clf()
 
                 if args.polarity:
-                    labels = ["negative", "netural", "positive"]
+                    labels = ["negative", "neutral", "positive"]
                 myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels, cmap=cmap)
                 outfile = os.path.join(args.output_dir, f"{args.lang}_{bt}_{model_type}.pdf")
+                plt.ylabel(ylabel)
+                plt.xlabel(xlabel)
                 plt.savefig(outfile)
                 plt.clf()
 
@@ -203,7 +236,7 @@ if __name__ == "__main__":
                 myplot.set(xlabel=None)
                 #myplot.tick_params(left=False)
                 if args.plot_type == "errbars" or args.plot_type == "scatter":
-                    myplot.axhspan(0.1,-0.1,alpha=0.2)
+                    myplot.axhspan(xspan,-xspan,alpha=0.2)
                     #myplot.axhline(0.12, linestyle="--", color="gray")
                     #myplot.axhline(-0.12, linestyle="--", color="gray")
                 myplot.axhline(0.0, linestyle=":", color="gray")
