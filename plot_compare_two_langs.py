@@ -8,9 +8,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from plotnine import ggplot, aes, geom_count
 from sklearn import metrics
+import numpy as np
 
 from utils.model_utils import lang2convergence, compressed2convergence, multi_convergence, \
     compressed_multi_convergence, balanced_multi_convergence, compressed_balanced_multi_convergence, mono_multi2convergence
+from utils.graph_utils import get_cmap_midpoint, shifted_colormap
 
 from evaluation.create_eval_set import lang2bias
 
@@ -68,6 +70,12 @@ if __name__ == "__main__":
 
     num_models = len(type_order)
 
+    # set the range that corresponds to Kiritchenko and Mohammad bias based on whether polarity or full range
+    if args.polarity:
+        xspan = 0.05
+    else:
+        xspan = 0.11
+
     # This all just makes the correct dataframes
     master_df = pd.DataFrame()
     print("Gathering dataframes...")
@@ -110,7 +118,7 @@ if __name__ == "__main__":
         # set output filename
         outfile = os.path.join(args.output_dir, f"compare_langs_{args.lang}_{args.compare_lang}_{bt}")
         # make errbar plot
-        y_axis = (-0.15, 0.25)
+        y_axis = (-0.15, 0.25) ## TODO maybe make this customisable
         mask = this_df["lang"] == args.lang
         df1 = this_df[mask]
         df2 = this_df[~mask]
@@ -121,7 +129,7 @@ if __name__ == "__main__":
                               color=colour, linestyle='',
                               err_style='bars', marker='X')
         # TODO if don't like this, can just use hue
-        myplot.axhspan(0.1, -0.1, alpha=0.2)
+        myplot.axhspan(xspan, -xspan, alpha=0.2)
         myplot.axhline(0.0, linestyle=":", color="gray")
         plt.xticks(rotation=90)
         plt.ylim(*y_axis)
@@ -143,7 +151,6 @@ if __name__ == "__main__":
 
         # do confusion matrices
         # if doing a confusion matrix heatmap, then need to also do a separate graph for each model
-        cmap = "bwr"
         print(f"Difference of {args.lang} and {args.compare_lang} (first minus second)")
         for model_type in type_order:
             print(model_type)
@@ -164,6 +171,10 @@ if __name__ == "__main__":
                                            labels=labels)
             cm = cm1 - cm2
             labels = ["negative","neutral", "positive"] if args.polarity else labels
+
+            cmap = plt.cm.bwr
+            vmin, vmax = np.min(cm), np.max(cm)
+            cmap = shifted_colormap(cmap, midpoint=get_cmap_midpoint(vmin, vmax), name=f'compare_{args.lang}_{args.compare_lang}_{bt}_{model_type}_cmap')
             myplot = sns.heatmap(cm, xticklabels=labels, yticklabels=labels, cmap=cmap)
             bias_cat_1 = list(set(model_df["bias_cat_1"].values))[0]
             bias_cat_2 = list(set(model_df["bias_cat_2"].values))[0]
