@@ -1,6 +1,7 @@
 datasets
 fugashi
 ipadic
+ipdb
 openpyxl
 pandas
 seaborn
