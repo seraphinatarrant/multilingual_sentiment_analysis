@@ -26,9 +26,8 @@ labels = ClassLabel(names=[str(i) for i in range(1, 6)])
 
 local_metric_path = "/home/s1948359/multilingual_sentiment_analysis/evaluation/accuracy.py"
 
-def compute_metrics(pred):
-    slurm=True
-    if slurm:
+def compute_metrics(pred, offline=False):
+    if offline:
         metric = load_metric(local_metric_path)
     else:
         metric = load_metric("accuracy")
@@ -81,13 +80,14 @@ def setup_argparse():
     p.add_argument('--small_test', action='store_true', help='run script on a fraction of the training set')
     p.add_argument('--use_product_cat', action='store_true')  # TODO implement using product category
     p.add_argument('--evaluate_only', action='store_true')
-    p.add_argument('--model_output', type=str, default='~/models/{}/{}_{}_{}_{}')
+    p.add_argument('--model_output', type=str, default='~/multilingual_sentiment_analysis/{}/{}_{}_{}_{}')
     p.add_argument('--load_model', type=str, help="load an already pretrained model")
     p.add_argument('--dataset_loc', default='/home/ec2-user/SageMaker/efs/sgt/data/')
     p.add_argument('--load_saved_dataset', action='store_true')
     p.add_argument('--project_name', default="fine_tuning_v3", help='name for wandb project')
     p.add_argument('--classifier_dropout', type=float, default=0.1, help='dropout for classifier')
     p.add_argument('--compressed', action='store_true', help='whether to use a compressed model')
+    p.add_argument('--offline', action='store_true', help='work without internet access')
     p.add_argument('--scrub', action='store_true', help='scrub gender info with regex, only works for english')
     p.add_argument('--xl_transfer', action='store_true', help='use large amounts of english data for training')
     return p.parse_args()
@@ -101,6 +101,7 @@ if __name__ == "__main__":
     model_type = "compressed_models" if args.compressed else "models"
     lang = args.lang if args.lang != "multi" else "{}+{}".format(args.lang, args.target_lang)
     time_now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    offline = args.offline
     
     if args.load_model:
         model_path = args.load_model
@@ -116,7 +117,7 @@ if __name__ == "__main__":
         time_now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         model_output = args.model_output.format(model_type, lang, args.epochs, args.seed, time_now)
         log_output = os.path.join(model_output, "logs")
-        model, tokenizer = load_model_and_tokenizer(args.model_loc, model_type, args.lang)
+        model, tokenizer = load_model_and_tokenizer(args.model_loc, model_type, args.lang, offline=args.offline)
 
     for d in ["models", model_output, log_output]:
         if not os.path.exists(d):
@@ -135,8 +136,7 @@ if __name__ == "__main__":
         tokenized_datasets = load_from_disk(args.dataset_loc)
 
     else:
-        slurm = True
-        if slurm == True:
+        if offline:
             raw_datasets = load_from_disk(os.path.join('/home/s1948359/data/amazon_reviews_multi', data_lang))
         else:    
             raw_datasets = load_dataset('amazon_reviews_multi', data_lang)

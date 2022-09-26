@@ -51,9 +51,8 @@ lang2tok_cfg = {
     }
 
 def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: str = "",
-                             from_path: bool = False, return_pipeline: bool = False):
+                             from_path: bool = False, return_pipeline: bool = False, offline: bool = False):
 
-    slurm = True
     if not from_path:  # in this case there is a yaml config
 
         model_loc = yaml.load(open(model_location), Loader=yaml.FullLoader)
@@ -62,7 +61,7 @@ def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: st
         print(this_model)
 
         
-        if slurm == True:
+        if offline:
             this_model = os.path.join('/home/s1948359/multilingual_sentiment_analysis/models/pretrained', this_model)
             cfg = AutoConfig.from_pretrained(this_model)
             tokenizer = AutoTokenizer.from_pretrained(this_model, config=cfg) 
@@ -74,7 +73,7 @@ def load_model_and_tokenizer(model_location: str, model_type: str = "", lang: st
             cfg = json.load(fin)
             tok_path = cfg["_name_or_path"]
 
-        tokenizer = AutoTokenizer.from_pretrained(tok_path) 
+    tokenizer = AutoTokenizer.from_pretrained(tok_path) 
         
     model = AutoModelForSequenceClassification.from_pretrained(this_model,
                                                                num_labels=5,
