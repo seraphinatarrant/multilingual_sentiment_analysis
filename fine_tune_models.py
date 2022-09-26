@@ -90,6 +90,7 @@ def setup_argparse():
     p.add_argument('--offline', action='store_true', help='work without internet access')
     p.add_argument('--scrub', action='store_true', help='scrub gender info with regex, only works for english')
     p.add_argument('--xl_transfer', action='store_true', help='use large amounts of english data for training')
+    p.add_argument('--fix_data_order', action='store_true', help='use a fixed seed for data shuffle')
     return p.parse_args()
 
 
@@ -177,10 +178,18 @@ if __name__ == "__main__":
         test_dataset = interleave_datasets([d["test"] for d in all_datasets])
 
 
+    if not args.fix_data_order:
+        print(f"Shuffling data with seed {args.seed}")
+        train_dataset = train_dataset.shuffle(seed=args.seed)
+        eval_dataset = eval_dataset.shuffle(seed=args.seed)
+        test_dataset = test_dataset.shuffle(seed=args.seed)
+    
     if args.small_test:
-        train_dataset = train_dataset.shuffle(seed=args.seed).select(range(1000))
-        eval_dataset = eval_dataset.shuffle(seed=args.seed).select(range(1000))
-        test_dataset = test_dataset.shuffle(seed=args.seed).select(range(1000))
+        train_dataset = train_dataset.select(range(1000))
+        eval_dataset = eval_dataset.select(range(1000))
+        test_dataset = test_dataset.select(range(1000))
+
+    
 
     print(train_dataset.column_names)
 
