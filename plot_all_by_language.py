@@ -14,6 +14,17 @@ from utils.model_utils import lang2convergence, compressed2convergence, multi_co
 
 from evaluation.create_eval_set import lang2bias
 
+
+def convert_to_cat(row):
+    val = int(row["performance_gap"])
+    if val == 0:
+        return None
+    elif val < 0:
+        return "male_bias"
+    elif val > 0:
+        return "female_bias"
+
+
 def get_convergence_by_type(model_type, lang):
     """
     multilingual models are zero shot to training data so the convergence numbers are the same
@@ -49,7 +60,8 @@ def setup_argparse():
     p.add_argument('--polarity', action='store_true', help='use results that have been preconverted to polarity')
     p.add_argument('--include_gold', action='store_true', help='if doing polarity, can also include '
                                                                'gold results, currently only works with heatmap')
-
+    p.add_argument('--save_df', action='store_true', help='save dataframe')
+    p.add_argument('--split_by_direction', action='store_true')
     return p.parse_args()
 
 
@@ -61,15 +73,25 @@ if __name__ == "__main__":
     type_order = ["baseline", "mono", "multi_on_mono", "mono_c", "multi_xl",
                   "multi_xl_c", "multi_xl_b", "multi_xl_c_b"]
 
+    # type2filepattern = {
+    #     "baseline": "results/baseline/{}/{}_ensemble.csv",
+    #     "mono": "results/{}/{}_ensemble.csv",
+    #     "multi_on_mono": "results/mono_multi/{}/multi+{}_{}_ensemble.csv",
+    #     "multi_xl": "results/{}/multi+en_{}_ensemble.csv",
+    #     "mono_c": "results/compressed/{}/{}_ensemble.csv",
+    #     "multi_xl_c": "results/compressed/{}/multi+en_{}_ensemble.csv",
+    #     "multi_xl_b": "results/balanced/{}/multi+en_{}_ensemble.csv",
+    #     "multi_xl_c_b": "results/balanced/compressed/{}/multi+en_{}_ensemble.csv",
+    # }
     type2filepattern = {
-        "baseline": "results/baseline/{}/{}_ensemble.csv",
-        "mono": "results/{}/{}_ensemble.csv",
-        "multi_on_mono": "results/mono_multi/{}/multi+{}_{}_ensemble.csv",
-        "multi_xl": "results/{}/multi+en_{}_ensemble.csv",
-        "mono_c": "results/compressed/{}/{}_ensemble.csv",
-        "multi_xl_c": "results/compressed/{}/multi+en_{}_ensemble.csv",
-        "multi_xl_b": "results/balanced/{}/multi+en_{}_ensemble.csv",
-        "multi_xl_c_b": "results/balanced/compressed/{}/multi+en_{}_ensemble.csv",
+        "baseline": "results/baseline/{}_ensemble.csv",
+        "mono": "results/{}_ensemble.csv",
+        "multi_on_mono": "results/mono_multi/multi+{}_{}_ensemble.csv",
+        "multi_xl": "results/multi+en_{}_ensemble.csv",
+        "mono_c": "results/compressed/{}_ensemble.csv",
+        "multi_xl_c": "results/compressed/multi+en_{}_ensemble.csv",
+        "multi_xl_b": "results/balanced/multi+en_{}_ensemble.csv",
+        "multi_xl_c_b": "results/balanced/compressed/multi+en_{}_ensemble.csv",
     }
 
     insert = "full_output"
@@ -84,9 +106,10 @@ if __name__ == "__main__":
 
     if args.polarity:
         pass # TODO empirically set y_axis
-    elif args.plot_type == "scatter" or args.plot_type == "errbars":
+    elif not args.split_by_direction and (args.plot_type == "scatter" or args.plot_type == "errbars"):
         y_axis = (-0.4, 0.8) # set empirically based on average gaps
-
+    elif args.split_by_direction:
+        y_axis = (0, 4)
     else:
         y_axis = (-4, 4)
 
@@ -114,7 +137,12 @@ if __name__ == "__main__":
 
     mask = master_df["bias_type"] == "rank" # artifact of a tested bias type in Japanese that no longer use
     master_df = master_df[~mask]
+    if args.split_by_direction:
+        master_df["bias_direction"] = master_df.apply(lambda row: convert_to_cat(row), axis=1)
+        master_df["performance_gap_abs"] = master_df["performance_gap"].abs()
 
+    if args.save_df:
+        master_df.to_pickle(f"{args.lang}_results.pkl")
     ## This is where the plotting happens
     # break out by bias_type
     lang = args.lang if args.lang != "en_scrubbed" else "en"
@@ -178,7 +206,12 @@ if __name__ == "__main__":
                     myplot = sns.violinplot(data=this_df, x="model_type", y="performance_gap", color=colour, order=type_order)
                 elif args.plot_type == 'errbars':
                     #ipdb.set_trace()
-                    myplot = sns.lineplot(data=this_df, x="model_type", y="performance_gap",
+                    if args.split_by_direction:
+                        myplot = sns.lineplot(data=this_df, x="model_type", y="performance_gap_abs",
+                                           color=colour, linestyle='', hue='bias_direction',
+                                           err_style='bars', marker='o')
+                    else:
+                        myplot = sns.lineplot(data=this_df, x="model_type", y="performance_gap",
                                            color=colour, linestyle='',
                                            err_style='bars', marker='o')
                 else:
@@ -191,7 +224,7 @@ if __name__ == "__main__":
                 myplot.set(ylabel=None)#, yticklabels=[])
                 myplot.set(xlabel=None)
                 #myplot.tick_params(left=False)
-                if args.plot_type == "errbars" or args.plot_type == "scatter":
+                if not args.split_by_direction and (args.plot_type == "errbars" or args.plot_type == "scatter"):
                     myplot.axhspan(0.1,-0.1,alpha=0.2)
                     #myplot.axhline(0.12, linestyle="--", color="gray")
                     #myplot.axhline(-0.12, linestyle="--", color="gray")
