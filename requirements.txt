@@ -1,5 +1,4 @@
 datasets
-fugashi
 ipadic
 ipdb
 openpyxl
