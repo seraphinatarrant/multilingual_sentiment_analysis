@@ -62,6 +62,7 @@ def setup_argparse():
                                                                'gold results, currently only works with heatmap')
     p.add_argument('--save_df', action='store_true', help='save dataframe')
     p.add_argument('--split_by_direction', action='store_true')
+    p.add_argument('--dataframe_path', type=str, help='use df instead of csv')
     return p.parse_args()
 
 
@@ -115,34 +116,40 @@ if __name__ == "__main__":
 
     num_models = len(type2filepattern)
 
-    # This all just makes the correct dataframes
-    master_df = pd.DataFrame()
-    print("Gathering dataframes...")
-    for model_type, file_pattern in type2filepattern.items():
-            print(model_type)
-            try:
-                infile = file_pattern.format(args.lang, args.lang) if model_type != "multi_on_mono" else file_pattern.format(args.lang, args.lang, args.lang)
-                df = pd.read_csv(infile)
-            except:
-                print("Couldn't read in file, may not exist: {}".format(infile), file=sys.stderr)
-                continue
-            if args.lang == "en_scrubbed":
-                df["lang"] = "en_s"
-            if model_type != "baseline":
-                convergence_steps = get_convergence_by_type(model_type, args.lang)
-                mask = df["steps"] == convergence_steps
-                df = df[mask]
-            df["model_type"] = model_type
-            master_df = master_df.append(df, ignore_index=True)
+    if not args.dataframe_path:
+        # This all just makes the correct dataframes
+        master_df = pd.DataFrame()
+        print("Gathering dataframes...")
+        for model_type, file_pattern in type2filepattern.items():
+                print(model_type)
+                try:
+                    infile = file_pattern.format(args.lang, args.lang) if model_type != "multi_on_mono" else file_pattern.format(args.lang, args.lang, args.lang)
+                    df = pd.read_csv(infile)
+                except:
+                    print("Couldn't read in file, may not exist: {}".format(infile), file=sys.stderr)
+                    continue
+                if args.lang == "en_scrubbed":
+                    df["lang"] = "en_s"
+                if model_type != "baseline":
+                    convergence_steps = get_convergence_by_type(model_type, args.lang)
+                    mask = df["steps"] == convergence_steps
+                    df = df[mask]
+                df["model_type"] = model_type
+                master_df = master_df.append(df, ignore_index=True)
 
-    mask = master_df["bias_type"] == "rank" # artifact of a tested bias type in Japanese that no longer use
-    master_df = master_df[~mask]
+        mask = master_df["bias_type"] == "rank" # artifact of a tested bias type in Japanese that no longer use
+        master_df = master_df[~mask]
+
+        if args.save_df:
+            master_df.to_pickle(f"{args.lang}_results.pkl")
+    
+    else:
+        master_df = pd.read_pickle(args.dataframe_path)
+
     if args.split_by_direction:
         master_df["bias_direction"] = master_df.apply(lambda row: convert_to_cat(row), axis=1)
         master_df["performance_gap_abs"] = master_df["performance_gap"].abs()
 
-    if args.save_df:
-        master_df.to_pickle(f"{args.lang}_results.pkl")
     ## This is where the plotting happens
     # break out by bias_type
     lang = args.lang if args.lang != "en_scrubbed" else "en"
